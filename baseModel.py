@@ -15,6 +15,9 @@ from utils.coco.pycocoevalcap.eval import COCOEvalCap
 from utils.misc import  ImageLoader
 from utils.nn import NN
 
+from keras.applications.vgg19 import VGG19
+from keras import backend as K
+from keras.models import Model
 
 class BaseModel(object):
     def __init__(self, config):
@@ -32,6 +35,9 @@ class BaseModel(object):
     def build(self):
         raise NotImplementedError()
 
+    def extract_features(self, images):
+        raise NotImplementedError()
+
     def train(self, sess, train_data):
         """ Train the model using the COCO train2014 data. """
         print("Training the model...")
@@ -47,9 +53,13 @@ class BaseModel(object):
                 batch = train_data.next_batch()
                 image_files, sentences, masks = batch
                 images = self.image_loader.load_images(image_files)
-                feed_dict = {self.images: images,
-                             self.sentences: sentences,
-                             self.masks: masks}
+
+                conv_features = self.image_loader.extract_features(images, self.config.batch_size) #extract image features using vgg19
+
+
+                feed_dict = {self.sentences: sentences, #removed images bc already got image features
+                             self.masks: masks, 
+                             self.conv_feats: conv_features}
                 # _, summary, global_step = sess.run([self.opt_op,
                 #                                     self.summary,
                 #                                     self.global_step],
@@ -200,6 +210,8 @@ class BaseModel(object):
                 sess.run(v.assign(data_dict[v.name]))
                 count += 1
         print("%d tensors loaded." %count)
+
+    
 
     def load_cnn(self, session, data_path, ignore_missing=True):
         """ Load a pretrained CNN model. """

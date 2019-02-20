@@ -2,12 +2,14 @@
 import tensorflow as tf
 
 from config import Config
-from model import CaptionGenerator
+from model_gan2 import CaptionGenerator
 from dataset import prepare_train_data, prepare_eval_data, prepare_test_data
 from scipy.misc import imread, imresize
 from imagenet_classes import class_names
 import numpy as np
 
+from utils.misc import ImageLoader
+import sys
 FLAGS = tf.app.flags.FLAGS
 
 tf.flags.DEFINE_string('phase', 'train',
@@ -49,15 +51,20 @@ def main(argv):
     with tf.Session() as sess:
         if FLAGS.phase == 'train':
             # training phase
+            image_path = 'D:/download/COCO/train/images/COCO_train2014_000000318556.jpg'
+            image_loader = ImageLoader('./utils/ilsvrc_2012_mean.npy')
+            
             data = prepare_train_data(config)
             model = CaptionGenerator(config)
             sess.run(tf.global_variables_initializer())
+
             if FLAGS.load:
                 model.load(sess, FLAGS.model_file)
             #load the cnn file
-            if FLAGS.load_cnn:
-                model.load_cnn(sess, FLAGS.cnn_model_file)
-            tf.get_default_graph().finalize()
+            #if FLAGS.load_cnn:
+                #model.load_cnn(sess, FLAGS.cnn_model_file)
+                #model.load_vgg()
+            #tf.get_default_graph().finalize()
             model.train(sess, data)
 
         elif FLAGS.phase == 'eval':

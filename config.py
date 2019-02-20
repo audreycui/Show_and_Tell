@@ -3,7 +3,7 @@ class Config(object):
     """ Wrapper class for various (hyper)parameters. """
     def __init__(self):
         # about the model architecture
-        self.cnn = 'vgg16'               # 'vgg16' or 'resnet50'
+        self.cnn = 'vgg19'               # changed from vgg16 to vgg19
         self.max_caption_length = 20
         self.dim_embedding = 512
         self.num_lstm_units = 512
@@ -42,24 +42,26 @@ class Config(object):
 
         # about the saver
         self.save_period = 1000
-        self.save_dir = './models/'
-        self.summary_dir = './summary/'
+        self.save_dir = 'D:/dev/show_and_tell/models/'
+        self.summary_dir = 'D:/dev/show_and_tell/summary/'
 
         # about the vocabulary
         self.vocabulary_file = './vocabulary.csv'
         self.vocabulary_size = 5000
 
         # about the training
-        self.train_image_dir = './train/images/'
-        self.train_caption_file = './train/captions_train2014.json'
-        self.temp_annotation_file = './train/anns.csv'
-        self.temp_data_file = './train/data.npy'
+        base_dir = 'D:/download/COCO'
+
+        self.train_image_dir = base_dir + '/train/images/'
+        self.train_caption_file = base_dir + '/train/captions_train2014.json'
+        self.temp_annotation_file = base_dir + '/train/anns.csv'
+        self.temp_data_file = base_dir + '/train/data.npy'
 
         # about the evaluation
-        self.eval_image_dir = './val/images/'
-        self.eval_caption_file = './val/captions_val2014.json'
-        self.eval_result_dir = './val/results/'
-        self.eval_result_file = './val/results.json'
+        self.eval_image_dir = base_dir + '/val/images/val2014/'
+        self.eval_caption_file = base_dir + '/val/captions_val2014.json'
+        self.eval_result_dir = base_dir + '/val/results/'
+        self.eval_result_file = base_dir + '/val/results.json'
         self.save_eval_result_as_image = False
 
         # about the testing

@@ -37,15 +37,15 @@ class CaptionGenerator(BaseModel):
         print("Building the CNN...")
 
         config = self.config
-        images = tf.placeholder( dtype=tf.float32, shape=[config.batch_size] + self.image_shape)
+        #images = tf.placeholder( dtype=tf.float32, shape=[config.batch_size] + self.image_shape)
         if self.config.cnn == 'vgg19': #added option for vgg19
-            self.build_vgg19(images)
+            self.build_vgg19()
         elif self.config.cnn == 'vgg16':
             self.build_vgg16(images)
         print("CNN built.")
 
     #'CaptionGenerator' object has no attribute 'fc2
-    def build_vgg19(self, images): #added build vgg19 using keras
+    def build_vgg19(self): #added build vgg19 using keras
         config = self.config
         
         net = VGG19(weights='imagenet')
@@ -56,11 +56,12 @@ class CaptionGenerator(BaseModel):
                                            # [config.batch_size, 8, 512])
         self.num_ctx = 8
         self.dim_ctx = 512
-        self.images = images
+        #self.images = images
         self.vgg19 = vgg19
         #self.conv_feats = reshaped_fc2_feats
 
-   
+    
+
     def build_rnn(self):
         """ Build the RNN. """
         print("Building the RNN...")
@@ -69,7 +70,7 @@ class CaptionGenerator(BaseModel):
         # Setup the placeholders
         if self.is_train:
             #contexts = self.conv_feats
-            self.conv_feats = tf.placeholder(dtype = tf.float32, shape = [config.batch_size, 8, 512]) 
+            self.conv_feats = tf.placeholder(dtype = tf.float32, shape = [config.batch_size, 8, 512]) #added 
             sentences = tf.placeholder(
                 dtype = tf.int32,
                 shape = [config.batch_size, config.max_caption_length])
@@ -108,7 +109,7 @@ class CaptionGenerator(BaseModel):
         cross_entropies = []
         predictions_correct = []
         num_steps = config.max_caption_length
-        image_emb = tf.reduce_mean(self.conv_feats, axis=1)
+        image_emb = tf.reduce_mean(self.conv_feats, axis =1)
 
         ## Initial memory and output are given zeros
         last_memory = initial_memory
@@ -379,7 +380,7 @@ class CaptionGenerator(BaseModel):
         tf.summary.histogram('histogram', var)
 
 
- def build_vgg16(self,images):
+    def build_vgg16(self,images):
         """ Build the VGG16 net. """
         config = self.config
         # conv1_1
