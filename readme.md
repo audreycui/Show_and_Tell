@@ -3,6 +3,7 @@ I am using Show_and_Tell as a starting point for developing an image to text con
 * replace implementation of VGG16 with the keras library's VGG19 
 * add image encoder lstm 
 * use monte carlo sampling instead of argmax for sampling the next predicted word
+
 I plan on:
 * adding a discriminator model and adversarial training
 * loading a dataset of artwork and their corresponding analysis paragraphs to train models
