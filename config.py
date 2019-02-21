@@ -13,6 +13,9 @@ class Config(object):
         self.dim_attend_layer = 512
         self.num_decode_layers = 1    ## Changed from 2 to 1   # 1 or 2
         self.dim_decode_layer = 1024
+        self.image_feat_dim = 4096
+        self.G_hidden_size = 512
+        self.START = 0
 
         # about the weight initialization and regularization
         self.fc_kernel_initializer_scale = 0.08
@@ -42,8 +45,8 @@ class Config(object):
 
         # about the saver
         self.save_period = 1000
-        self.save_dir = 'D:/dev/show_and_tell/models/'
-        self.summary_dir = 'D:/dev/show_and_tell/summary/'
+        self.save_dir = 'D:/dev/show_and_tell/models_img2poem_generator/'
+        self.summary_dir = 'D:/dev/show_and_tell/summary_img2poem_generator/'
 
         # about the vocabulary
         self.vocabulary_file = './vocabulary.csv'
@@ -51,7 +54,7 @@ class Config(object):
 
         # about the training
         base_dir = 'D:/download/COCO'
-
+        
         self.train_image_dir = base_dir + '/train/images/'
         self.train_caption_file = base_dir + '/train/captions_train2014.json'
         self.temp_annotation_file = base_dir + '/train/anns.csv'

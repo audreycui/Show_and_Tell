@@ -13,9 +13,7 @@ class ImageLoader(object):
         self.scale_shape = np.array([224, 224], np.int32)
         self.crop_shape = np.array([224, 224], np.int32)
         self.mean = np.load(mean_file).mean(1).mean(1)
-        self.net = VGG19(weights='imagenet')
-        self.model = Model(input= self.net.input, output= self.net.get_layer('fc2').output)
-
+        
     def load_image(self, file_name):
         """
         Load and preprocess an image
@@ -75,17 +73,14 @@ class ImageLoader(object):
         return images
 
     def extract_features(self, images, batch_size):
-        #model = self.vgg19
-
+        #model = vgg19
         features = []
         for i in range(batch_size):
-            #images[i] = np.expand_dims(images[i], axis=0)
-            #print ('shape ' + str(images[i].shape))
             fc2 = self.model.predict(images[i])
-            reshaped = np.reshape(fc2, (8, 512))
+            #reshaped = np.reshape(fc2, (8, 512)) deleted reshape 
             features.append(reshaped)
         
-        return features
+        return features #shape: (batch_size, 4096)
 
     def mytest(self, image = 'D:/download/COCO/train/images/COCO_train2014_000000318556.jpg'):
         #model = self.vgg19

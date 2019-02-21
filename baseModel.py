@@ -54,7 +54,7 @@ class BaseModel(object):
                 image_files, sentences, masks = batch
                 images = self.image_loader.load_images(image_files)
 
-                conv_features = self.image_loader.extract_features(images, self.config.batch_size) #extract image features using vgg19
+                conv_features = self.extract_features(images, self.config.batch_size) #extract image features using vgg19
 
 
                 feed_dict = {self.sentences: sentences, #removed images bc already got image features
