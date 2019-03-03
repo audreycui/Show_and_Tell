@@ -7,10 +7,10 @@ from nltk.tokenize import word_tokenize
 
 class Vocabulary(object):
     def __init__(self, size, save_file=None):
+        self.size = size
         self.words = []
         self.word2idx = {}
         self.word_frequencies = []
-        self.size = size
         if save_file is not None:
             self.load(save_file)
 
@@ -21,19 +21,21 @@ class Vocabulary(object):
             for w in word_tokenize(sentence.lower()):
                 word_counts[w] = word_counts.get(w, 0) + 1.0
 
-        assert self.size-1 <= len(word_counts.keys())
-        self.words.append('<start>')
-        self.word2idx['<start>'] = 0
-        self.word_frequencies.append(1.0)
+        assert self.size <= len(word_counts.keys())
+
+        for i, pred in enumerate(['<S>', '<UNK>']):
+            self.words.append(pred)
+            self.word2idx[pred] = i
+            self.word_frequencies.append(1.0)
 
         word_counts = sorted(list(word_counts.items()),
                             key=lambda x: x[1],
                             reverse=True)
 
-        for idx in range(self.size-1):
+        for idx in range(self.size):
             word, frequency = word_counts[idx]
             self.words.append(word)
-            self.word2idx[word] = idx + 1
+            self.word2idx[word] = idx + 2
             self.word_frequencies.append(frequency)
 
         self.word_frequencies = np.array(self.word_frequencies)
@@ -45,7 +47,13 @@ class Vocabulary(object):
         """ Tokenize a sentence, and translate each token into its index
             in the vocabulary. """
         words = word_tokenize(sentence.lower())
-        word_idxs = [self.word2idx[w] for w in words]
+        word_idxs = []
+        for w in words:
+            if w in self.word2idx.keys():
+                word_idxs.append(self.word2idx[w])
+            else:
+                word_idxs.append(self.word2idx['<UNK>'])
+
         return word_idxs
 
     def get_sentence(self, idxs):
@@ -62,8 +70,11 @@ class Vocabulary(object):
 
     def save(self, save_file):
         """ Save the vocabulary to a file. """
+        #print("words:"+str(len(self.words)))
+        #print("index:"+str(len(list(range(self.size)))))
+        #print("freq:"+str(len(self.word_frequencies)))
         data = pd.DataFrame({'word': self.words,
-                             'index': list(range(self.size)),
+                             'index': list(range(self.size+2)),
                              'frequency': self.word_frequencies})
         data.to_csv(save_file)
 

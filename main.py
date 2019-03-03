@@ -2,6 +2,7 @@
 import tensorflow as tf
 
 from config import Config
+from SeqGAN import SeqGAN
 from model_gan2 import CaptionGenerator
 from dataset import prepare_train_data, prepare_eval_data, prepare_test_data
 from scipy.misc import imread, imresize
@@ -37,6 +38,9 @@ tf.flags.DEFINE_integer('beam_size', 3,
 
 tf.flags.DEFINE_string('image_file','./man.jpg','The file to test the CNN')
 
+tf.flags.DEFINE_string('model', 'SeqGAN',
+                       'model type, can be SeqGAN, Show&Tell, and others to be added')
+
 
 ## Start token is not required, Stop Tokens are given via "." at the end of each sentence.
 ## TODO : Early stop functionality by considering validation error. We should first split the validation data.
@@ -48,16 +52,22 @@ def main(argv):
     config.beam_size = FLAGS.beam_size
     config.trainable_variable = FLAGS.train_cnn
 
+    if FLAGS.model == 'SeqGAN':
+        model = SeqGAN(config)
+    elif FLAGS.model == 'Show&Tell':
+        model = CaptionGenerator(config)
+    else:
+        model = SeqGAN(config)
+
     with tf.Session() as sess:
         if FLAGS.phase == 'train':
             # training phase
-            image_path = 'D:/download/COCO/train/images/COCO_train2014_000000318556.jpg'
-            image_loader = ImageLoader('./utils/ilsvrc_2012_mean.npy')
-            
-            data = prepare_train_data(config)
-            model = CaptionGenerator(config)
-            sess.run(tf.global_variables_initializer())
+            #image_path = 'D:/download/COCO/train/images/COCO_train2014_000000318556.jpg'
+            #image_loader = ImageLoader('./utils/ilsvrc_2012_mean.npy')
 
+            data = prepare_train_data(config)
+            #model = CaptionGenerator(config)
+            sess.run(tf.global_variables_initializer())
             if FLAGS.load:
                 model.load(sess, FLAGS.model_file)
             #load the cnn file
@@ -69,15 +79,14 @@ def main(argv):
 
         elif FLAGS.phase == 'eval':
             # evaluation phase
-            coco, data, vocabulary = prepare_eval_data(config)
-            model = CaptionGenerator(config)
+            eval_data= prepare_eval_data(config)
             model.load(sess, FLAGS.model_file)
-            tf.get_default_graph().finalize()
-            model.eval(sess, coco, data, vocabulary)
+            #sess.run(tf.global_variables_initializer())
+            #tf.get_default_graph().finalize()
+            model.eval(sess, eval_data)
 
         elif FLAGS.phase == 'test_loaded_cnn':
             # testing only cnn
-            model = CaptionGenerator(config)
             sess.run(tf.global_variables_initializer())
             imgs = tf.placeholder(tf.float32, [None, 224, 224, 3])
             probs = model.test_cnn(imgs)
@@ -93,11 +102,10 @@ def main(argv):
 
         else:
             # testing phase
-            data, vocabulary = prepare_test_data(config)
-            model = CaptionGenerator(config)
+            test_data= prepare_test_data(config)
             model.load(sess, FLAGS.model_file)
-            tf.get_default_graph().finalize()
-            model.test(sess, data, vocabulary)
+            #tf.get_default_graph().finalize()
+            model.test(sess, test_data)
 
 if __name__ == '__main__':
     tf.app.run()

@@ -1,8 +1,10 @@
+import os
 import tensorflow as tf
 import numpy as np
 from keras.applications.vgg19 import VGG19
 from keras import backend as K
 from keras.models import Model
+from tqdm import tqdm
 
 from baseModel import BaseModel
 
@@ -13,13 +15,55 @@ from baseModel import BaseModel
     #removed reduce_mean of convnet features
     #changed argmax to monte carlo for sampling next word when training rnn
 class CaptionGenerator(BaseModel):
+    def __init__(self, config):
+        super().__init__(config)
+
     def build(self):
+        super().build()
+
         """ Build the model. """
-        self.build_cnn()
+        #self.build_cnn()
         self.build_rnn()
         if self.is_train:
             self.build_optimizer()
             ##self.build_summary() ## TODO : commented the build_summary because it might take extra time
+
+    def train(self, sess, train_data):
+        """ Train the model using the COCO train2014 data. """
+        print("Training the model...")
+        config = self.config
+
+        if not os.path.exists(config.summary_dir):
+            os.mkdir(config.summary_dir)
+        train_writer = tf.summary.FileWriter(config.summary_dir,
+                                             sess.graph)
+
+        for _ in tqdm(list(range(config.num_epochs)), desc='epoch'):
+            for _ in tqdm(list(range(train_data.num_batches)), desc='batch'):
+                batch = train_data.next_batch()
+                image_files, sentences, masks = batch
+                images = self.image_loader.load_images(image_files)
+                conv_features = self.image_loader.extract_features(self.trained_model, images, self.config.batch_size) #extract image features using vgg19
+                #conv_features = self.get_imagefeatures(image_files, self.config.batch_size)
+
+                feed_dict = {self.sentences: sentences, #removed images bc already got image features
+                             self.masks: masks, 
+                             self.conv_feats: conv_features}
+                # _, summary, global_step = sess.run([self.opt_op,
+                #                                     self.summary,
+                #                                     self.global_step],
+                #                                     feed_dict=feed_dict)
+                _, global_step = sess.run([self.opt_op,
+                                                    self.global_step],
+                                                   feed_dict=feed_dict)
+                if (global_step + 1) % config.save_period == 0:
+                    self.save()
+                #train_writer.add_summary(summary, global_step)
+            train_data.reset()
+
+        self.save()
+        train_writer.close()
+        print("Training complete.")
 
     def test_cnn(self,image):
         self.imgs = image
@@ -52,7 +96,7 @@ class CaptionGenerator(BaseModel):
     def build_vgg19(self): #added build vgg19 using keras
         config = self.config
         self.net = VGG19(weights='imagenet')
-        self.model = Model(input= self.net.input, output= self.net.get_layer('fc2').output)
+        self.trained_model = Model(input= self.net.input, output= self.net.get_layer('fc2').output)
 
         #fc2 = vgg19.predict(images)
         # Reshaping the 4096 to fit the lstm size
@@ -247,18 +291,19 @@ class CaptionGenerator(BaseModel):
         self.predictions = tf.stack(predictionsArr, axis=1)
 
         print("RNN built.")
-
-    def extract_features(self, images, batch_size):
+        """
+    def extract_features(self, trained_model, images, batch_size):
         #model = vgg19
         features = []
         for i in range(batch_size):
-            fc2 = self.model.predict(images[i])
+            fc2 = trained_model.predict(images[i])
             reshaped = np.reshape(fc2, (4096))  
             features.append(reshaped)
         
+        #print ("feature shape:" +str(np.shape(features)))  
         return features #shape: (batch_size, 4096)
         #added batch normalization helper method
-
+        """
     def batch_norm(self, x, mode='train', name=None):
         return tf.contrib.layers.batch_norm(inputs=x,
                                             decay=0.95,

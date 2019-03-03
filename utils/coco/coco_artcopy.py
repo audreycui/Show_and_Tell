@@ -45,7 +45,6 @@ __version__ = '2.0'
 # Licensed under the Simplified BSD License [see bsd.txt]
 
 import json
-import csv
 import datetime
 import time
 import matplotlib.pyplot as plt
@@ -60,10 +59,10 @@ import os
 import string
 from tqdm import tqdm
 from nltk.tokenize import word_tokenize
-import pandas as pd
+import csv
 
 class COCO:
-    def __init__(self, annotation_file=None, ignore_file=None):
+    def __init__(self, annotation_file=None):
         """
         Constructor of Microsoft COCO helper class for reading and visualizing annotations.
         :param annotation_file (str): location of annotation file
@@ -82,48 +81,12 @@ class COCO:
         if not annotation_file == None:
             print('loading annotations into memory...')
             tic = time.time()
-            self.loadDataset(annotation_file, ignore_file)
+            dataset = csv.DictReader(open(annotation_file, 'r'), fieldnames = ['image_id', 'image_file', 'caption'])
+            #dataset = list(dataset)
             print('Done (t=%0.2fs)'%(time.time()- tic))
-            if self.dataset:
-                self.process_dataset()
-                self.createIndex()
-
-    def loadDataset(self, annotation_file, ignore_file):
-        try:
-            with open(annotation_file, 'r') as f:
-                self.dataset = json.load(f)
-        except Exception:
-            #try:
-            self.dataset = {
-                "annotations":[],
-                "images":[]
-            }
-            ignore_ids = []
-            if ignore_file:
-                df = pd.read_csv(ignore_file).values
-                ignore_ids = [idx for seqno, idx in df]
-                print(ignore_ids)
-            with open(annotation_file, 'r') as f:
-                reader = csv.reader(f)
-                for id, file_name, caption in reader:
-                    print("id:%s" + id)
-                    if id not in ignore_ids:
-                        annotation = {"image_id": id, "id": id, "caption": caption}
-                        image = {"id": id, "file_name": file_name}
-                        self.dataset["annotations"].append(annotation)
-                        self.dataset["images"].append(image)
-                    else:
-                        print("ignore id %d with file '%s'" % (id, file_name))
-            #except Exception:
-            #    print ("Unsupported caption file format other than json or csv")
-            #    self.dataset = None
-
-    def process_dataset(self):
-        for ann in self.dataset['annotations']:
-            q = ann['caption'].lower()
-            if q[-1]!='.':
-                q = q + '.'
-            ann['caption'] = q
+            self.dataset = dataset
+            self.process_dataset()
+            self.createIndex()
 
     def createIndex(self):
         # create index
@@ -166,14 +129,6 @@ class COCO:
         self.cats = cats
         self.img_name_to_id = img_name_to_id
 
-        """
-        print("anns:"+str(len(anns)))
-        print("imgToAnns:"+str(len(imgToAnns)))
-        print("catToImgs:"+str(len(catToImgs)))
-        print("imgs:"+str(len(imgs)))
-        print("cats:"+str(len(cats)))
-        print("img_name_to_id:"+str(len(img_name_to_id)))
-        """
     def info(self):
         """
         Print information about the annotation file.
@@ -340,6 +295,13 @@ class COCO:
                 urllib.urlretrieve(img['coco_url'], fname)
             print('downloaded %d/%d images (t=%.1fs)'%(i, N, time.time()- tic))
 
+    def process_dataset(self):
+        for ann in self.dataset['annotations']:
+            q = ann['caption'].lower()
+            if q[-1]!='.':
+                q = q + '.'
+            ann['caption'] = q
+
     def filter_by_cap_len(self, max_cap_len):
         print("Filtering the captions by length...")
         keep_ann = {}
@@ -381,5 +343,4 @@ class COCO:
         self.createIndex()
 
     def all_captions(self):
-
         return [ann['caption'] for ann_id, ann in self.anns.items()]

@@ -6,8 +6,11 @@ from tqdm import tqdm
 from utils.coco.coco import COCO
 from utils.vocabulary import Vocabulary
 
+#TODO: add sampler method
 class DataSet(object):
     def __init__(self,
+                 coco,
+                 vocabulary,
                  image_ids,
                  image_files,
                  batch_size,
@@ -15,6 +18,8 @@ class DataSet(object):
                  masks=None,
                  is_train=False,
                  shuffle=False):
+        self.coco = coco
+        self.vocabulary = vocabulary
         self.image_ids = np.array(image_ids)
         self.image_files = np.array(image_files)
         self.word_idxs = np.array(word_idxs)
@@ -40,7 +45,8 @@ class DataSet(object):
 
     def next_batch(self):
         """ Fetch the next batch. """
-        assert self.has_next_batch()
+        if not self.has_next_batch(): 
+            self.reset() #added check for having a next batch. if not, reset batches
 
         if self.has_full_next_batch():
             start, end = self.current_idx, \
@@ -71,8 +77,8 @@ class DataSet(object):
 
 def prepare_train_data(config):
     """ Prepare the data for training the model. """
-    coco = COCO(config.train_caption_file)
-    coco.filter_by_cap_len(config.max_caption_length)
+    coco = COCO(config.train_caption_file, config.ignore_file)
+    #coco.filter_by_cap_len(config.max_caption_length)
 
     print("Building the vocabulary...")
     vocabulary = Vocabulary(config.vocabulary_size)
@@ -81,10 +87,10 @@ def prepare_train_data(config):
         vocabulary.save(config.vocabulary_file)
     else:
         vocabulary.load(config.vocabulary_file)
-    print("Vocabulary built.")
+    #print("Vocabulary built.")
     print("Number of words = %d" %(vocabulary.size))
 
-    coco.filter_by_words(set(vocabulary.words))
+    #coco.filter_by_words(set(vocabulary.words))
 
     print("Processing the captions...")
     if not os.path.exists(config.temp_annotation_file):
@@ -108,11 +114,11 @@ def prepare_train_data(config):
         masks = []
         for caption in tqdm(captions):
             current_word_idxs_ = vocabulary.process_sentence(caption)
-            current_num_words = len(current_word_idxs_)
+            current_num_words = min(config.max_caption_length, len(current_word_idxs_))
             current_word_idxs = np.zeros(config.max_caption_length,
                                          dtype = np.int32)
             current_masks = np.zeros(config.max_caption_length)
-            current_word_idxs[:current_num_words] = np.array(current_word_idxs_)
+            current_word_idxs[:current_num_words] = np.array(current_word_idxs_[:current_num_words])
             current_masks[:current_num_words] = 1.0
             word_idxs.append(current_word_idxs)
             masks.append(current_masks)
@@ -124,18 +130,18 @@ def prepare_train_data(config):
         data = np.load(config.temp_data_file).item()
         word_idxs = data['word_idxs']
         masks = data['masks']
-    print("Captions processed.")
+    #print("Captions processed.")
     print("Number of captions = %d" %(len(captions)))
 
-    print("Building the dataset...")
-    dataset = DataSet(image_ids,
+    dataset = DataSet(coco,
+                      vocabulary,
+                      image_ids,
                       image_files,
                       config.batch_size,
                       word_idxs,
                       masks,
                       True,
                       True)
-    print("Dataset built.")
     return dataset
 
 def prepare_eval_data(config):
@@ -156,12 +162,13 @@ def prepare_eval_data(config):
     print("Number of words = %d" %(vocabulary.size))
 
     print("Building the dataset...")
-    dataset = DataSet(image_ids, image_files, config.batch_size)
+    dataset = DataSet(coco, vocabulary, image_ids, image_files, config.batch_size)
     print("Dataset built.")
-    return coco, dataset, vocabulary
+    return dataset
 
 def prepare_test_data(config):
     """ Prepare the data for testing the model. """
+    coco = COCO(config.eval_caption_file)
     files = os.listdir(config.test_image_dir)
     image_files = [os.path.join(config.test_image_dir, f) for f in files
         if f.lower().endswith('.jpg') or f.lower().endswith('.jpeg')]
@@ -177,9 +184,9 @@ def prepare_test_data(config):
     print("Number of words = %d" %(vocabulary.size))
 
     print("Building the dataset...")
-    dataset = DataSet(image_ids, image_files, config.batch_size)
+    dataset = DataSet(coco, vocabulary, image_ids, image_files, config.batch_size)
     print("Dataset built.")
-    return dataset, vocabulary
+    return dataset
 
 def build_vocabulary(config):
     """ Build the vocabulary from the training data and save it to a file. """
@@ -190,3 +197,12 @@ def build_vocabulary(config):
     vocabulary.build(coco.all_captions())
     vocabulary.save(config.vocabulary_file)
     return vocabulary
+
+def sample(self, batch_size):
+    x = []
+    for i in range(batch_size):
+        ind = np.random.randint(self.count)
+        caption = self.dataset[ind]
+        x.append(caption)
+    #x = np.array(x)
+    return x

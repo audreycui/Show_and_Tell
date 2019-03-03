@@ -30,51 +30,19 @@ class BaseModel(object):
         self.global_step = tf.Variable(0,
                                        name = 'global_step',
                                        trainable = False)
+
         self.build()
 
-    def build(self):
-        raise NotImplementedError()
+    def get_imagefeatures(self, image_files, batch_size):
+        return self.image_loader.get_imagefeatures(self.trained_model, image_files, batch_size)
 
-    def extract_features(self, images):
-        raise NotImplementedError()
+    def build(self):
+        # use pretrained vgg model to extract image features
+        net = VGG19(weights='imagenet')
+        self.trained_model = Model(input= net.input, output= net.get_layer('fc2').output)
 
     def train(self, sess, train_data):
-        """ Train the model using the COCO train2014 data. """
-        print("Training the model...")
-        config = self.config
-
-        if not os.path.exists(config.summary_dir):
-            os.mkdir(config.summary_dir)
-        train_writer = tf.summary.FileWriter(config.summary_dir,
-                                             sess.graph)
-
-        for _ in tqdm(list(range(config.num_epochs)), desc='epoch'):
-            for _ in tqdm(list(range(train_data.num_batches)), desc='batch'):
-                batch = train_data.next_batch()
-                image_files, sentences, masks = batch
-                images = self.image_loader.load_images(image_files)
-
-                conv_features = self.extract_features(images, self.config.batch_size) #extract image features using vgg19
-
-
-                feed_dict = {self.sentences: sentences, #removed images bc already got image features
-                             self.masks: masks, 
-                             self.conv_feats: conv_features}
-                # _, summary, global_step = sess.run([self.opt_op,
-                #                                     self.summary,
-                #                                     self.global_step],
-                #                                     feed_dict=feed_dict)
-                _, global_step = sess.run([self.opt_op,
-                                                    self.global_step],
-                                                   feed_dict=feed_dict)
-                if (global_step + 1) % config.save_period == 0:
-                    self.save()
-                #train_writer.add_summary(summary, global_step)
-            train_data.reset()
-
-        self.save()
-        train_writer.close()
-        print("Training complete.")
+        raise NotImplementedError()
 
     def eval(self, sess, eval_gt_coco, eval_data, vocabulary):
         """ Evaluate the model using the COCO val2014 data. """
@@ -210,8 +178,6 @@ class BaseModel(object):
                 sess.run(v.assign(data_dict[v.name]))
                 count += 1
         print("%d tensors loaded." %count)
-
-    
 
     def load_cnn(self, session, data_path, ignore_missing=True):
         """ Load a pretrained CNN model. """

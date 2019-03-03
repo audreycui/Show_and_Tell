@@ -6,7 +6,9 @@ from keras import backend as K
 from keras.models import Model
 from scipy.linalg import norm
 from keras.applications.vgg19 import VGG19
-#import tensorflow as tf
+
+
+#added highway for discriminator
 class ImageLoader(object):
     def __init__(self, mean_file):
         self.bgr = True
@@ -72,14 +74,28 @@ class ImageLoader(object):
         images = np.array(images, np.float32)
         return images
 
-    def extract_features(self, images, batch_size):
+
+    def extract_features(self, trained_model, images, batch_size):
         #model = vgg19
         features = []
         for i in range(batch_size):
-            fc2 = self.model.predict(images[i])
-            #reshaped = np.reshape(fc2, (8, 512)) deleted reshape 
+            fc2 = trained_model.predict(images[i])
+            reshaped = np.reshape(fc2, (4096))  
             features.append(reshaped)
         
+        #print ("feature shape:" +str(np.shape(features)))  
+        return features #shape: (batch_size, 4096)
+
+    def get_imagefeatures(self, trained_model, images_files, batch_size):
+        images = self.load_image(images_files)
+        #model = vgg19
+        features = []
+        for i in range(batch_size):
+            fc2 = trained_model.predict(images[i])
+            reshaped = np.reshape(fc2, (4096))  
+            features.append(reshaped)
+        
+        #print ("feature shape:" +str(np.shape(features)))  
         return features #shape: (batch_size, 4096)
 
     def mytest(self, image = 'D:/download/COCO/train/images/COCO_train2014_000000318556.jpg'):
@@ -94,3 +110,4 @@ class ImageLoader(object):
             features.append(reshaped)
         
         return features
+
