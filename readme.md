@@ -1,3 +1,13 @@
+### Audrey's modifications
+I am using Show_and_Tell as a starting point for developing an image to text conditional GAN for the generation of analysis paragraphs from input artwork. So far, I have made the following modifications to the original code:
+* replace implementation of VGG16 with the keras library's VGG19 
+* add image encoder lstm 
+* use monte carlo sampling instead of argmax for sampling the next predicted word
+
+I plan on:
+* adding a discriminator model and adversarial training
+* loading a dataset of artwork and their corresponding analysis paragraphs to train models
+
 ### Introduction
 This neural system for image captioning is roughly based on the paper "Show and Tell: A Neural Image Caption Generatorn" by Vinayls et al. (ICML2015). The input is an image, and the output is a sentence describing the content of the image. It uses a convolutional neural network to extract visual features from the image, and uses a LSTM recurrent neural network to decode these features into a sentence. This project is implemented using the Tensorflow library, and allows end-to-end training of both CNN and RNN parts.
 
