@@ -39,7 +39,7 @@ class Discriminator(object):
                 name="W")
             emb_x = tf.nn.embedding_lookup(emb, input_x)
             emb_x_expand = tf.expand_dims(emb_x, -1)
-
+            print(emb_x_expand, emb_x)
             # Create a convolution + maxpool layer for each filter size
             pooled_outputs = []
             for i, pair in enumerate(zip(filter_sizes, num_filters)):
@@ -75,16 +75,13 @@ class Discriminator(object):
             h_pool_flat = tf.reshape(h_pool, [-1, num_filters_total])
             
             # Add highway
-            """
+            #print(h_pool_flat)
             with tf.name_scope("highway"):
                 h_highway = highway(h_pool_flat,
                                     h_pool_flat.get_shape()[1], 
-                                    1, 0)
-            """
-            h_highway = h_pool_flat
-            #print('h_pool_flat: ' + str(h_pool_flat.get_shape()))
-            #print('h_highway: ' + str(h_highway.get_shape()))
+                                    config.highway_layers, 0)
             # Add dropout
+            h_highway = h_pool_flat
 
             with tf.name_scope("dropout"):
                 h_drop = tf.nn.dropout(h_highway, dropout_keep_prob) 
@@ -159,17 +156,14 @@ def highway(input, size, num_layers=1, bias=-2.0,
         z = t * g(Wy + b) + (1-t) * y
         where g is nonlinearity, t is transform gate, and (1-t) is carry gate.
     """
-    print("enter highway")
-    print (input)
-    print('size: ' + str(size))
-    print('num_layers: ' + str(num_layers))
-    print('bias: ' + str(bias))
-    print('f: ' + str(f))
+    #print("enter highway")
     with tf.variable_scope(scope, reuse = tf.AUTO_REUSE): #added auto reuse
         size = int(size)
-        output = tf.Variable(input, tf.float32)
+        #output = tf.Variable(input, tf.float32)
+        
         for idx in range(num_layers):
-            g = f(slim.fully_connected(
+            #g = f(slim.fully_connected(
+            g = tf.nn.relu(slim.fully_connected(
                 input, size,
                 scope= 'highway_lin_%d' % idx,
                 activation_fn=None))
@@ -181,6 +175,6 @@ def highway(input, size, num_layers=1, bias=-2.0,
 
             output = t * g + (1. - t) * input
             input = output
-    print(output)
-    print("leaving highway")
+        
+    #print(output)
     return output

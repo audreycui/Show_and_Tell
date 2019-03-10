@@ -11,6 +11,8 @@ import numpy as np
 
 from utils.misc import ImageLoader
 import sys
+import os
+
 FLAGS = tf.app.flags.FLAGS
 
 tf.flags.DEFINE_string('phase', 'train',
@@ -47,10 +49,14 @@ tf.flags.DEFINE_string('model', 'SeqGAN',
 
 def main(argv):
     config = Config()
+
     config.phase = FLAGS.phase
     config.train_cnn = FLAGS.train_cnn
     config.beam_size = FLAGS.beam_size
     config.trainable_variable = FLAGS.train_cnn
+
+    np.random.seed(config.seed)
+    tf.random.set_random_seed(config.seed)
 
     if FLAGS.model == 'SeqGAN':
         model = SeqGAN(config)
@@ -60,6 +66,7 @@ def main(argv):
         model = SeqGAN(config)
 
     with tf.Session() as sess:
+        print("FLAG: " + FLAGS.phase)
         if FLAGS.phase == 'train':
             # training phase
             #image_path = 'D:/download/COCO/train/images/COCO_train2014_000000318556.jpg'
@@ -78,6 +85,7 @@ def main(argv):
             model.train(sess, data)
 
         elif FLAGS.phase == 'eval':
+            print("EVALUATING")
             # evaluation phase
             eval_data= prepare_eval_data(config)
             model.load(sess, FLAGS.model_file)

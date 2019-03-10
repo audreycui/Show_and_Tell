@@ -15,7 +15,8 @@ from baseModel import BaseModel
     #changed argmax to monte carlo for sampling next word when training rnn
     #moved build functions (cnn, rnn, optimizer) to constructor
     #added pretrain function
-    #added generate function 
+    #added generate function
+    #added sentiment features 
 class Generator(object):
     def __init__(self, parent, config): #replace build
 
@@ -370,7 +371,7 @@ class Generator(object):
         tf.summary.scalar('min', tf.reduce_min(var))
         tf.summary.histogram('histogram', var)
 
-
+'''
 def pretrain_old(self, sess, train_data): #changed train method to pretraining method for generator
         """ Pretrain the generator using the COCO train2014 data. """
 
@@ -411,3 +412,4 @@ def pretrain_old(self, sess, train_data): #changed train method to pretraining m
         self.save()
         train_writer.close()
         #print("Training complete.")
+'''

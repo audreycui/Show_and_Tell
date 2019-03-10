@@ -57,15 +57,25 @@ class SeqGAN(BaseModel):
     def get_nn(self):
         return self.nn
 
-    def get_imagefeatures(self, image_files):
-        images = self.image_loader.load_images(image_files)
-        return self.image_loader.extract_features(self.trained_model, images, self.config.batch_size) #extract image features using vgg19
 
-    def next_batch(self, data):
+    def get_imagefeatures_mxnet(self, image_files): #returns (batch_size, 4096*3)
+        images = self.image_loader.load_images_mxnet(image_files)
+        return self.image_loader.extract_features_mxnet(self.object_model, self.sentiment_model, self.scene_model, images, self.config.batch_size) #extract image features using vgg19
+
+    
+    def get_imagefeatures_vgg19(self, image_files):
+        #images = self.image_loader.load_images_vgg19(image_files)
+
+        return self.image_loader.extract_features_vgg19(self.trained_model, image_files, self.config.batch_size) #extract image features using vgg19
+    
+    def next_batch(self, data, extract=False):
+        #print("HERE!!! next batch")
         batch = data.next_batch()
         image_files, sentences, masks = batch
-        conv_features = self.get_imagefeatures(image_files)
-
+        if (extract):
+            conv_features = self.get_imagefeatures_vgg19(image_files)
+        else:
+            conv_features = []
         return sentences, conv_features
 
     def train(self, sess, train_data):
@@ -100,7 +110,7 @@ class SeqGAN(BaseModel):
         
         fake_samples = []
         for epoch in tqdm(list(range(min(pretrain_g_epochs, train_data.num_batches))), desc='Pretraining Generator'):
-            sentences, conv_features = self.next_batch(train_data)
+            sentences, conv_features = self.next_batch(train_data, True)
             #print ('pretrain g epoch', epoch) #sampler gets coco data
             summary, fake_samples = gen.pretrain(sess, sentences, conv_features) #changed sampler to next_batch
             #n print(np.shape(fake_samples))
@@ -127,7 +137,7 @@ class SeqGAN(BaseModel):
         
         for epoch in tqdm(list(range(config.total_epochs)), desc='Adversarial training'):
             for _ in range(1):
-                real_samples, conv_features = self.next_batch(train_data)
+                real_samples, conv_features = self.next_batch(train_data, True)
                 #fake_samples = gen.generate(sess) #generator generates fake samples
                 rewards = gen.get_reward(sess, real_samples, conv_features, 16, dis) 
                 summary, fake_samples = gen.train(sess, real_samples, conv_features, rewards) #generate new fake samples and reward
@@ -138,7 +148,7 @@ class SeqGAN(BaseModel):
 
             for _ in tqdm(list(range(5)), desc='Discriminator batch'):
                 #fake_samples = gen.generate(sess) #generator generates fake samples after being trained
-                real_samples, conv_features = self.next_batch(train_data)
+                real_samples, conv_features = self.next_batch(train_data, False)
                 #TODO pass in image condition for conditional gan
                 samples = np.concatenate([fake_samples, real_samples])
                 labels = np.concatenate([np.zeros((batch_size,)),
@@ -160,9 +170,15 @@ class SeqGAN(BaseModel):
             if evaluate and evaluator is not None:
                 evaluator(gen.generate(sess), pretrain_g_epochs+epoch)
             '''
-            real_samples, conv_features = self.next_batch(train_data)
+            real_samples, conv_features = self.next_batch(train_data, True)
             np.save('generation', gen.generate(sess, real_samples, conv_features))
-
+        if not os.path.exists(config.save_dir):
+            try:  
+                os.mkdir(config.save_dir)
+            except OSError:  
+                print ("Creation of the directory %s failed" % path)
+            else:  
+                print ("Successfully created the directory %s " % path)
         self.save()
         writer.close()
         print("Training complete.")
@@ -182,7 +198,8 @@ class SeqGAN(BaseModel):
         for k in tqdm(list(range(min(eval_epochs, eval_data.num_batches))), desc='batch'):
         #for k in range(1):
             image_files = eval_data.next_batch()
-            conv_features = self.get_imagefeatures(image_files)
+            print("len image files: " + str(len(image_files)))
+            conv_features = self.get_imagefeatures(image_files, config.batch_size)
             caption_data, scores = self.generator.eval(sess, conv_features)
 
             fake_cnt = 0 if k<eval_data.num_batches-1 \

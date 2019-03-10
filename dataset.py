@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 from utils.coco.coco import COCO
 from utils.vocabulary import Vocabulary
-
+from utils.caffe_io import Transformer
 #TODO: add sampler method
 class DataSet(object):
     def __init__(self,
@@ -109,6 +109,7 @@ def prepare_train_data(config):
         image_ids = annotations['image_id'].values
         image_files = annotations['image_file'].values
 
+    print("NUM CAPTIONS: " + str(len(captions)))
     if not os.path.exists(config.temp_data_file):
         word_idxs = []
         masks = []
@@ -132,7 +133,7 @@ def prepare_train_data(config):
         masks = data['masks']
     #print("Captions processed.")
     print("Number of captions = %d" %(len(captions)))
-
+    print("Number of word_idxs = %d" %(len(word_idxs)))
     dataset = DataSet(coco,
                       vocabulary,
                       image_ids,
@@ -146,12 +147,12 @@ def prepare_train_data(config):
 
 def prepare_eval_data(config):
     """ Prepare the data for evaluating the model. """
-    coco = COCO(config.eval_caption_file)
+    coco = COCO(config.eval_caption_file, config.ignore_file_eval)
     image_ids = list(coco.imgs.keys())
     image_files = [os.path.join(config.eval_image_dir,
                                 coco.imgs[image_id]['file_name'])
                                 for image_id in image_ids]
-
+    print("IMAGE FILES SHAPE PREP DATA " + str(len(image_files)))
     print("Building the vocabulary...")
     if os.path.exists(config.vocabulary_file):
         vocabulary = Vocabulary(config.vocabulary_size,

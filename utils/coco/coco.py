@@ -89,6 +89,7 @@ class COCO:
                 self.createIndex()
 
     def loadDataset(self, annotation_file, ignore_file):
+        #print("ignore_file = " + ignore_file)
         try:
             with open(annotation_file, 'r') as f:
                 self.dataset = json.load(f)
@@ -100,20 +101,20 @@ class COCO:
             }
             ignore_ids = []
             if ignore_file:
+
                 df = pd.read_csv(ignore_file).values
                 ignore_ids = [idx for seqno, idx in df]
-                print(ignore_ids)
             with open(annotation_file, 'r') as f:
                 reader = csv.reader(f)
                 for id, file_name, caption in reader:
-                    print("id:%s" + id)
-                    if id not in ignore_ids:
+                    if int(id) not in ignore_ids:
                         annotation = {"image_id": id, "id": id, "caption": caption}
                         image = {"id": id, "file_name": file_name}
                         self.dataset["annotations"].append(annotation)
                         self.dataset["images"].append(image)
-                    else:
-                        print("ignore id %d with file '%s'" % (id, file_name))
+                    #else:
+                        #print('ignored id: ' + id) 
+
             #except Exception:
             #    print ("Unsupported caption file format other than json or csv")
             #    self.dataset = None
