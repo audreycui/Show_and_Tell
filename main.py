@@ -23,7 +23,7 @@ tf.flags.DEFINE_boolean('load', False,
                         the latest checkpoint or a specified file')
 
 tf.flags.DEFINE_string('model_file', None,
-                       'If sepcified, load a pretrained model from this file')
+                       'If specified, load a pretrained model from this file')
 
 tf.flags.DEFINE_boolean('load_cnn', False,
                         'Turn on to load a pretrained CNN model')

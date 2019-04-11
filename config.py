@@ -39,8 +39,8 @@ class Config(object):
         # about the optimization
         self.num_epochs = 200
         self.total_epochs = 200 #added for gan
-        self.pretrain_g_epochs=1000 #added for gan
-        self.pretrain_d_epochs=50 #added for gan
+        self.pretrain_g_epochs=5000 #added for gan
+        self.pretrain_d_epochs=5000 #added for gan
         self.d_filter_sizes=[3, 5, 5, 5] #added for discriminator
         self.d_num_filters=[50, 80, 80, 100] #added for discriminator
         self.highway_layers = 5 # added for dis
@@ -86,7 +86,7 @@ class Config(object):
         self.ignore_file_eval = base_dir + '/ignore_eval.csv'
 
         self.train_image_dir = base_dir + '/train/images/'
-        self.temp_annotation_file = base_dir + '/train/ann.csv'
+        self.temp_annotation_file = base_dir + '/train/temp_ann.csv'
         self.temp_data_file = base_dir + '/train/data.npy'
 
         # about the evaluation

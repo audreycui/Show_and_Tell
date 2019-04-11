@@ -104,6 +104,8 @@ class COCO:
 
                 df = pd.read_csv(ignore_file).values
                 ignore_ids = [idx for seqno, idx in df]
+
+            ann_file = pd.read_csv(annotation_file)
             with open(annotation_file, 'r') as f:
                 reader = csv.reader(f)
                 for id, file_name, caption in reader:

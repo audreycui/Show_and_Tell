@@ -109,7 +109,7 @@ class SeqGAN(BaseModel):
                                              sess.graph)
         
         fake_samples = []
-        for epoch in tqdm(list(range(min(pretrain_g_epochs, train_data.num_batches))), desc='Pretraining Generator'):
+        for epoch in tqdm(list(range(pretrain_g_epochs)), desc='Pretraining Generator'):
             sentences, conv_features = self.next_batch(train_data, True)
             #print ('pretrain g epoch', epoch) #sampler gets coco data
             summary, fake_samples = gen.pretrain(sess, sentences, conv_features) #changed sampler to next_batch
@@ -123,7 +123,7 @@ class SeqGAN(BaseModel):
             #TODO evaluator
         train_data.reset()
 
-        for epoch in tqdm(list(range(min(pretrain_g_epochs, train_data.num_batches))), desc='Pretraining Discriminator'):
+        for epoch in tqdm(list(range(pretrain_d_epochs)), desc='Pretraining Discriminator'):
             #fake_samples = gen.generate(sess)
             real_samples, conv_features = self.next_batch(train_data)
             samples = np.concatenate([fake_samples, real_samples])

@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-
+import csv
 from utils.coco.coco import COCO
 from utils.vocabulary import Vocabulary
 from utils.caffe_io import Transformer
@@ -105,10 +105,22 @@ def prepare_train_data(config):
         annotations.to_csv(config.temp_annotation_file)
     else:
         annotations = pd.read_csv(config.temp_annotation_file)
-        captions = annotations['caption'].values
-        image_ids = annotations['image_id'].values
-        image_files = annotations['image_file'].values
-
+        #annotations = coco.
+        print(annotations.shape)
+        #print (annotations.values[0])
+        #captions = annotations['caption'].values
+        #image_ids = annotations['image_id'].values
+        #image_files = annotations['image_file'].values
+        
+        captions = [] 
+        image_ids = [] 
+        image_files = [] 
+        for id, file, cap in annotations.values:
+            
+            image_ids.append(id)
+            image_files.append(file)
+            captions.append(cap)
+        
     print("NUM CAPTIONS: " + str(len(captions)))
     if not os.path.exists(config.temp_data_file):
         word_idxs = []
