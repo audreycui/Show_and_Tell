@@ -28,6 +28,7 @@ import config
 class BaseModel(object):
     def __init__(self, config):
         self.config = config
+        #self.is_train = True
         self.is_train = True if config.phase == 'train' else False
         self.train_cnn = self.is_train and config.train_cnn
         self.image_loader = ImageLoader('./utils/ilsvrc_2012_mean.npy')

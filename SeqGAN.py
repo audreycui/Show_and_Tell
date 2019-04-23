@@ -12,7 +12,7 @@ from discriminator import Discriminator
 #from discriminator_t import Discriminator
 from generator import Generator
 from utils.coco.pycocoevalcap.eval import COCOEvalCap
-
+from seq2seq import BasicS2SModel
 import os
 import shutil
 
@@ -41,7 +41,9 @@ class SeqGAN(BaseModel):
             an image in the tensorboard'''
         super().__init__(config)
 
+        #sentences = np.array(sentences)
         self.generator = Generator(self, config)
+        #self.generator = BasicS2SModel(self, config)
         self.discriminator = Discriminator(self, config) 
         self.log_generation = False
         
@@ -54,10 +56,11 @@ class SeqGAN(BaseModel):
         self.num_ctx = 8
         self.dim_ctx = 512
     """
+
     def get_nn(self):
         return self.nn
 
-
+    #TODO fix this 
     def get_imagefeatures_mxnet(self, image_files): #returns (batch_size, 4096*3)
         images = self.image_loader.load_images_mxnet(image_files)
         return self.image_loader.extract_features_mxnet(self.object_model, self.sentiment_model, self.scene_model, images, self.config.batch_size) #extract image features using vgg19
@@ -71,12 +74,12 @@ class SeqGAN(BaseModel):
     def next_batch(self, data, extract=False):
         #print("HERE!!! next batch")
         batch = data.next_batch()
-        image_files, sentences, masks = batch
+        image_files, sentences, masks, sent_lens = batch
         if (extract):
             conv_features = self.get_imagefeatures_vgg19(image_files)
         else:
             conv_features = []
-        return sentences, conv_features
+        return sentences, conv_features, sent_lens
 
     def train(self, sess, train_data):
         '''
@@ -109,23 +112,65 @@ class SeqGAN(BaseModel):
                                              sess.graph)
         
         fake_samples = []
+
+        vgg_dir = 'D:/download/art_desc/train/images_vgg/'
+        # Batch_size: 1
+        '''
+        conv_features = [
+            np.load(vgg_dir+'art_desc1.npy'), 
+            np.load(vgg_dir+'art_desc2.npy'), 
+            np.load(vgg_dir+'art_desc3.npy'), 
+            np.load(vgg_dir+'art_desc4.npy')] 
+        target_batches = [
+            ['The close range of this photograph of peeling paint precludes the viewer from gaining any foothold into the space of the picture, emphasizing its ultimate flatness. Siskind was especially drawn to surfaces that resembled the canvases of the Abstract Expressionist painters, with whom he was friends.'],
+            ['Metal Hook is one of Siskind\'s first photographs that truly focuses on the abstract visual language of ordinary objects.  The flatness of the image as a whole also serves to assert the graphic quality of the metal hook itself as a sign/symbol for male and female, thus suggesting a level of content in addition to that of form.'],
+            ['One of Siskind\'s later works, Recife (Olinda) 8 was taken during his travels in Northeastern Brazil.  The result is that we are forced to remain as viewers attached to the abstract surface - noting with pleasure the additional details of age, texture, misaligned lines, and accidental drips.'],
+            ['Siskind\'s first pictures show a decidedly more straightforward approach to picture making than the later work for which he became known. Although the male figure is a specific individual and technically the focal point, he is flattened in his own reflection against the back wall, pressed into the service of the overall design of the photograph.']]
+        sentences = np.squeeze(target_batches)
+        print(sentences)
+        '''
+
+        #sentences, conv_features, sent_lens = self.next_batch(train_data, True)
         for epoch in tqdm(list(range(pretrain_g_epochs)), desc='Pretraining Generator'):
-            sentences, conv_features = self.next_batch(train_data, True)
-            #print ('pretrain g epoch', epoch) #sampler gets coco data
-            summary, fake_samples = gen.pretrain(sess, sentences, conv_features) #changed sampler to next_batch
-            #n print(np.shape(fake_samples))
+        #for epoch in range(1):
+            sentences, conv_features, sent_lens = self.next_batch(train_data, True)
+            
+            summary, fake_samples, loss = gen.pretrain(sess, sentences, conv_features, sent_lens) #changed sampler to next_batch
+            #print(np.shape(fake_samples))
             #next_batch consists of images, captions, and masks
+            if (epoch%10 == 0):
+                print("TARGET: " + train_data.vocabulary.get_sentence(sentences[0]))
+                print("PREDICTED" + train_data.vocabulary.get_sentence(fake_samples[0]))
+                print(">>>>> LOSS " + str(loss))
             writer.add_summary(summary, epoch)
             '''
             if evaluate and evaluator is not None: #TODO add eval
                 evaluator(gen.generate(sess), epoch)
             '''
             #TODO evaluator
+        if config.debug:
+            saver = tf.train.Saver(tf.global_variables())
+            saver.save(sess, self.config.checkpoint_dir+"model.ckpt", global_step=self.generator.global_step)
+        else:
+            #print("")
+            self.save(sess)
+        #return
+
         train_data.reset()
 
         for epoch in tqdm(list(range(pretrain_d_epochs)), desc='Pretraining Discriminator'):
-            #fake_samples = gen.generate(sess)
-            real_samples, conv_features = self.next_batch(train_data)
+        #for epoch in range(1):
+            sentences, conv_features, sent_lens = self.next_batch(train_data, True)
+            fake_samples = gen.generate(sess, sentences, conv_features, sent_lens)
+            fake_samples = np.squeeze(fake_samples)
+            if (epoch%50 == 0):
+                print("TARGET: " + train_data.vocabulary.get_sentence(sentences[0]))
+                print("PREDICTED: " + train_data.vocabulary.get_sentence(fake_samples[0]))
+            
+            real_samples, conv_features, sample_lens = self.next_batch(train_data)
+
+           #print("fake samples shape: " + str(fake_samples.shape))
+            #print("real samples shape: " + str(real_samples.shape))
             samples = np.concatenate([fake_samples, real_samples])
             labels = np.concatenate([np.zeros((batch_size,)),
                                      np.ones((batch_size,))])
@@ -136,19 +181,35 @@ class SeqGAN(BaseModel):
         train_data.reset()
         
         for epoch in tqdm(list(range(config.total_epochs)), desc='Adversarial training'):
+        #for epoch in range(1):
             for _ in range(1):
-                real_samples, conv_features = self.next_batch(train_data, True)
-                #fake_samples = gen.generate(sess) #generator generates fake samples
-                rewards = gen.get_reward(sess, real_samples, conv_features, 16, dis) 
-                summary, fake_samples = gen.train(sess, real_samples, conv_features, rewards) #generate new fake samples and reward
+                sentences, conv_features, sent_lens = self.next_batch(train_data, True)
+                #real_samples = sentences
+                fake_samples = gen.generate(sess, sentences, conv_features, sent_lens)
+                fake_samples = np.squeeze(fake_samples) #generator generates fake samples
+                if (epoch%50 == 0):
+                    print("TARGET: " + train_data.vocabulary.get_sentence(sentences[0]))
+                    print("PREDICTED: " + train_data.vocabulary.get_sentence(fake_samples[0]))
+        
+                rewards = gen.get_reward(sess, sentences, conv_features, config.num_rollout, dis) 
+
+                #debug: changed fake samples to sentences (real samples)
+                summary, fake_samples = gen.train(sess, fake_samples, conv_features, rewards) #generate new fake samples and reward
+                
                 # np.set_printoptions(linewidth=np.inf,
                 #                     precision=3)
                 # print rewards.mean(0)
             writer.add_summary(summary, epoch)
 
             for _ in tqdm(list(range(5)), desc='Discriminator batch'):
-                #fake_samples = gen.generate(sess) #generator generates fake samples after being trained
-                real_samples, conv_features = self.next_batch(train_data, False)
+                #print("conv features shape " + str(np.array(conv_features).shape))
+                sentences, conv_features, sent_lens = self.next_batch(train_data, True)
+
+                fake_samples = gen.generate(sess, sentences, conv_features, sent_lens)
+                fake_samples = np.squeeze(fake_samples) #generator generates fake samples after being trained
+                #real_samples = sentences
+
+                real_samples, conv_features, sample_lens = self.next_batch(train_data, True)
                 #TODO pass in image condition for conditional gan
                 samples = np.concatenate([fake_samples, real_samples])
                 labels = np.concatenate([np.zeros((batch_size,)),
@@ -170,8 +231,8 @@ class SeqGAN(BaseModel):
             if evaluate and evaluator is not None:
                 evaluator(gen.generate(sess), pretrain_g_epochs+epoch)
             '''
-            real_samples, conv_features = self.next_batch(train_data, True)
-            np.save('generation', gen.generate(sess, real_samples, conv_features))
+            real_samples, conv_features, sample_lens = self.next_batch(train_data, True)
+            np.save('generation', gen.generate(sess, real_samples, conv_features, sample_lens))
         if not os.path.exists(config.save_dir):
             try:  
                 os.mkdir(config.save_dir)
@@ -179,7 +240,7 @@ class SeqGAN(BaseModel):
                 print ("Creation of the directory %s failed" % path)
             else:  
                 print ("Successfully created the directory %s " % path)
-        self.save()
+        self.save(sess)
         writer.close()
         print("Training complete.")
 
@@ -192,15 +253,22 @@ class SeqGAN(BaseModel):
         if not os.path.exists(config.eval_result_dir):
             os.mkdir(config.eval_result_dir)
 
+        #if config.debug:
+        self.restore_model(sess)
+        vgg_dir = 'D:/download/art_desc/train/images_vgg/'
         # Generate the captions for the images
         idx = 0
-        eval_epochs = 1000
+        eval_epochs = 500
         for k in tqdm(list(range(min(eval_epochs, eval_data.num_batches))), desc='batch'):
         #for k in range(1):
             image_files = eval_data.next_batch()
-            print("len image files: " + str(len(image_files)))
+            #print("len image files: " + str(len(image_files)))
+            #conv_features = [np.load(vgg_dir+'art_desc2047.npy'), np.load(vgg_dir+'art_desc2048.npy')]
             conv_features = self.get_imagefeatures(image_files, config.batch_size)
-            caption_data, scores = self.generator.eval(sess, conv_features)
+            caption_data = self.generator.eval(sess, conv_features)
+            caption_data = np.squeeze(caption_data)
+            
+            #print('caption data shape ' + str(np.array(caption_data).shape))
 
             fake_cnt = 0 if k<eval_data.num_batches-1 \
                          else eval_data.fake_count
@@ -209,6 +277,7 @@ class SeqGAN(BaseModel):
                 word_idxs = caption_data[l]
                 ## get_sentence will return a sentence till there is a end delimiter which is '.'
                 caption = str(eval_data.vocabulary.get_sentence(word_idxs))
+                print(caption)
                 results.append({'image_id': int(eval_data.image_ids[idx]),
                                 'caption': caption})
                 #print(results)
@@ -235,3 +304,15 @@ class SeqGAN(BaseModel):
         scorer = COCOEvalCap(eval_data.coco, eval_result_coco)
         scorer.evaluate()
         print("Evaluation complete.")
+
+    def restore_model(self,sess):
+        checkpoint_dir = self.config.save_dir
+        saver = tf.train.Saver(tf.global_variables())
+        saver.restore(sess,tf.train.latest_checkpoint(checkpoint_dir))
+
+    def save(self,sess):
+        checkpoint_dir = self.config.save_dir
+        writer = tf.summary.FileWriter(checkpoint_dir, sess.graph)
+        saver = tf.train.Saver(tf.global_variables())
+        saver.save(sess,checkpoint_dir + "model.ckpt",global_step=self.global_step)
+        

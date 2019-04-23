@@ -8,6 +8,8 @@ class Config(object):
         ts = time.time()
         self.st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H-%M-%S')
 
+        self.debug = False
+
         # random seed
         self.seed = 17
 
@@ -20,11 +22,19 @@ class Config(object):
         self.dim_initalize_layer = 512
         self.num_attend_layers = 2       # 1 or 2
         self.dim_attend_layer = 512
-        self.num_decode_layers = 1    ## Changed from 2 to 1   # 1 or 2
+        self.num_decode_layers = 3    ## Changed from 2 to 1   # 1 or 2
         self.dim_decode_layer = 1024
-        self.image_feat_dim = 4096*1 #for both image object, sentiment, and scene features
+        self.image_feat_dim = 4096*1 #for both image features
         self.G_hidden_size = 512
-        self.START = 0
+        self.D_hidden_size = 512
+        self.combine_type = 'concat' #'concat' or 'bilinear pooling'
+
+        #added for seq2seq
+        self.max_gradient_norm = 5.0
+        self.atten_size = 30 #attention size
+        self.beam_size = 3
+        self.use_beam_search = False
+
 
         # about the weight initialization and regularization
         self.fc_kernel_initializer_scale = 0.08
@@ -33,22 +43,23 @@ class Config(object):
         self.conv_kernel_regularizer_scale = 1e-4
         self.conv_activity_regularizer_scale = 0.0
         self.fc_drop_rate = 0.5
-        self.lstm_drop_rate = 0.5
+        self.lstm_drop_rate = 0.3
         self.attention_loss_factor = 0.01
-
+        
         # about the optimization
-        self.num_epochs = 200
+        #self.num_epochs = 2000
         self.total_epochs = 200 #added for gan
         self.pretrain_g_epochs=5000 #added for gan
-        self.pretrain_d_epochs=5000 #added for gan
+        self.pretrain_d_epochs=1000 #added for gan
         self.d_filter_sizes=[3, 5, 5, 5] #added for discriminator
         self.d_num_filters=[50, 80, 80, 100] #added for discriminator
+        self.num_rollout = 16
         self.highway_layers = 5 # added for dis
-        self.batch_size = 16
+        self.batch_size = 8
         self.optimizer = 'Adam'    # 'Adam', 'RMSProp', 'Momentum' or 'SGD'
         self.learning_rate = 0.001 # for seqgan
         self.initial_learning_rate = 0.0001
-        self.learning_rate_decay_factor = 1.0
+        self.learning_rate_decay_factor = 0.98
         self.num_steps_per_decay = 100000
         self.clip_gradients = 5.0
         self.momentum = 0.0
@@ -66,6 +77,7 @@ class Config(object):
         self.log_dir = 'D:/dev/show_and_tell/logs_gan_art/'
         self.eval_log_dir = 'D:/dev/show_and_tell/elogs/' #TODO eval
 
+        self.checkpoint_dir = 'D:/test/checkpoint/'
         # about the training
 
         # Dataset - COCO
@@ -79,9 +91,16 @@ class Config(object):
         base_dir = 'D:/download/art_desc'
         self.train_caption_file = base_dir + '/train/ann.csv'
         self.eval_caption_file = base_dir + '/val/ann.csv'
-        self.vocabulary_size = 10000
 
+        # vocabulary
+        self.vocabulary_size = 10000
+        self.ctrl_symbols = ['<S>', '<P>', '<E>', '<UNK>']
         self.vocabulary_file = base_dir + '/vocabulary.csv'
+        self._START_ = 0
+        self._PAD_ = 1
+        self._END_ = 2
+        self._UNK_ = 3
+
         self.ignore_file = base_dir + '/ignore.csv'
         self.ignore_file_eval = base_dir + '/ignore_eval.csv'
 

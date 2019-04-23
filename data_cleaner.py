@@ -56,9 +56,9 @@ tf.flags.DEFINE_string('model', 'SeqGAN',
 def main():
     config = Config()
 
-    load_ignore_file(config)
+    #load_ignore_file(config)
     #prepare_train_data(config)
-    #cleanup_data(config)
+    cleanup_data(config)
 
 def load_ignore_file(config):
   df = pd.read_csv(config.ignore_file).values
@@ -71,20 +71,21 @@ def cleanup_data(config):
         with open(config.train_caption_file, 'r') as f:
             self.dataset = json.load(f)
     except Exception:
-        try:
-            with open(config.train_caption_file, 'r') as f:
-                reader = csv.reader(f)
-                for id, file_name, caption in reader:
-                    try:
-                        img = image.load_img(file_name, target_size=(224, 224))
-                    except Exception:
-                        print ("cannot identify image file:" + file_name)
-                        bad_ids.append(id)
-                        pass
-        except Exception:
-            print ("Unsupported caption file format other than json or csv")
-            return
-
+        #try:
+        with open(config.train_caption_file, 'r') as f:
+            reader = csv.reader(f)
+            for id, file_name, caption in reader:
+                try:
+                    img = image.load_img(file_name, target_size=(224, 224))
+                except Exception:
+                    print ("cannot identify image file:" + file_name)
+                    bad_ids.append(id)
+                    pass
+    
+        #except Exception:
+            #print ("Unsupported caption file format other than json or csv")
+            #return
+        
     print("Total bad image files:%d" % len(bad_ids))
     data = pd.DataFrame({'index': bad_ids})
     data.to_csv(config.ignore_file)

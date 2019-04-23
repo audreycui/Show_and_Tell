@@ -7,7 +7,7 @@ from keras.models import Model
 
 from baseModel import BaseModel
 
-#Audrey's modifications: 
+#modifications to seqgan/show and tell code: 
     #added build_vgg19 method using keras
     #added lstm encoder
     #added batch normalization method
@@ -24,9 +24,6 @@ class Generator(object):
         self.config = config
         self.is_train = parent.is_train
 
-        #Audrey's modifications
-        #changed rnn decoder to lstm image encoder + lstm decoder
-        #new decoder takes in the encoder's final state as its initial state (rather than initial token)
         print("Building the Generator...")
         #added in config: image_feature_dim = 4096, G_hidden_size = 512
 
@@ -91,8 +88,7 @@ class Generator(object):
         # Prepare to run
         output_ids = [] #indices of predictions
         output_probs = [] #probabilities of output
-        #cross_entropies = []
-        #predictions_correct = []
+     
         num_steps = config.max_caption_length
         #image_emb = tf.reduce_mean(self.conv_feats, axis =1) #removed reduce mean
         
@@ -107,18 +103,17 @@ class Generator(object):
             _, state = encoder(lstm_input, state)
             encoder_state = state 
 
-        ## Initial memory and output are given zeros
-        #last_memory = initial_memory
-        #last_output = initial_output
+    
         last_word = []
 
         #============================= decoder ===================================================================
-        #last_state = last_memory, last_output
-        last_state = encoder_state #modified: initial state of decoder is the final state of encoder
+        #initial state of decoder lstm is the final state of encoder lstm
+        #^the image feats being fed into the encoder is what makes the generator conditional
+        last_state = encoder_state 
 
-        start_token = tf.constant(config.START, tf.int32, [batch_size])
+        start_token = tf.constant(config._START_, tf.int32, [batch_size])
         # Generate the words one by one
-        for idx in range(num_steps): #+1 accounts for first token
+        for idx in range(num_steps):
             #first step: start token. otherwise, embed last word
             if idx == 0:
                 decoder_input = tf.nn.embedding_lookup(embedding_matrix,
@@ -136,6 +131,7 @@ class Generator(object):
                 output, state = decoder(decoder_input, last_state)
                 memory, _ = state
                 #print("output:"+ str(output))
+
             # Decode the expanded output of LSTM into a word
             with tf.variable_scope("decode"):
                 ## Logits is of size vocab
@@ -147,10 +143,8 @@ class Generator(object):
                 # Montecarlo sampling
                 prediction = tf.reshape(tf.multinomial(log_probs, 1), [batch_size])   # 1 means sample once
                 #prediction is the index of predicted word
-                #output_ids.append(tf.cast(prediction, tf.int32))
                 output_ids.append(prediction)
-                #print("prediction:"+str(prediction))
-                #deleted calculation of loss function
+                
             last_state = state
             if self.is_train:
                 ##  During training the input to LSTM is fed by user
@@ -159,27 +153,13 @@ class Generator(object):
                 # During testing the input to current time stamp of LSTM is the previous time stamp output.
                 last_word = prediction
 
-            tf.get_variable_scope().reuse_variables()
+            #tf.get_variable_scope().reuse_variables()
 
         self.output_ids = output_ids
         self.output_probs = output_probs
-        #print("output_ids:"+str(output_ids))
-        #TODO: figure out the purpose of the loss calculation below: 
+    
         if self.is_train:
-            # Compute the final loss, if necessary
-            '''
-            cross_entropies = tf.stack(cross_entropies, axis=1)
-            cross_entropy_loss = tf.reduce_sum(cross_entropies) \
-                                 / tf.reduce_sum(masks)
-
-            reg_loss = tf.losses.get_regularization_loss()
-
-            total_loss = cross_entropy_loss + reg_loss
-
-            predictions_correct = tf.stack(predictions_correct, axis=1)
-            accuracy = tf.reduce_sum(predictions_correct) \
-                       / tf.reduce_sum(masks) 
-            '''
+           
 
             pretrain_loss = tf.reduce_mean(
                 tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -195,17 +175,12 @@ class Generator(object):
             self.pretrain_summary = tf.summary.scalar(
                 "g_pretrain_loss", pretrain_loss)
            
-            #self.total_loss = total_loss
-            #self.cross_entropy_loss = cross_entropy_loss
-            #self.reg_loss = reg_loss
-            #self.accuracy = accuracy
-
+           
         #reinforcement learning
         rewards = tf.placeholder(tf.float32,
                              shape=[batch_size, num_steps],
                              name="rewards")
-        #g_seq = output_ids[num_steps-1] 
-        #g_prob = output_probs[num_steps-1]
+       
 
         g_seq = tf.stack(output_ids, axis=1)
         g_prob = tf.stack(output_probs,axis=1)
@@ -255,20 +230,24 @@ class Generator(object):
         self.pred_probs = g_prob
         print("Generator built.")
 
-    def generate(self, sess, given_tokens, conv_features):
+    def generate(self, sess, given_tokens, conv_features, len):
         #print("Generating tokens...")
+        #len for debugging
+
         feed_dict = {self.given_tokens: given_tokens, #removed images bc already got image features
                      self.conv_features: conv_features}
         return sess.run(self.predictions, feed_dict=feed_dict)
     
-    def pretrain(self, sess, sentences, conv_features):
+    def pretrain(self, sess, sentences, conv_features, len):
         #print ("Training the model for one batch..")
+        #len for debugging
+
         feed_dict = {self.given_tokens: sentences, 
                      self.conv_features: conv_features}
-        _, summary, predictions = sess.run([self.pretrain_op, self.pretrain_summary, self.predictions],
+        loss, summary, predictions = sess.run([self.pretrain_loss, self.pretrain_summary, self.predictions],
                               feed_dict=feed_dict)
         #print ("One run of training data is done")
-        return summary, predictions
+        return summary, predictions, loss
 
     def train(self, sess, given_tokens, conv_features, rewards):
         #print("Training the model...")
@@ -284,7 +263,7 @@ class Generator(object):
         predictions, probs = sess.run([self.predictions, self.pred_probs], feed_dict=feed_dict)
         return predictions, probs
 
-    #get_reward and rollout are from seqgan
+    #get rewards from discriminator
     def get_reward(self, sess, given_tokens, conv_features, rollout_num, discriminator):
         #print("get_reward...")
         batch_size = self.config.batch_size
@@ -370,46 +349,3 @@ class Generator(object):
         tf.summary.scalar('max', tf.reduce_max(var))
         tf.summary.scalar('min', tf.reduce_min(var))
         tf.summary.histogram('histogram', var)
-
-'''
-def pretrain_old(self, sess, train_data): #changed train method to pretraining method for generator
-        """ Pretrain the generator using the COCO train2014 data. """
-
-        #TODO move this out of basemodel and into generator, create more general training/pretraining method here
-        self.build_optimizer() # added build optimizer in the training method
-        #print("Pretraining the model...")
-        config = self.config
-
-        if not os.path.exists(config.summary_dir):
-            os.mkdir(config.summary_dir)
-        train_writer = tf.summary.FileWriter(config.summary_dir,
-                                             sess.graph)
-
-        for _ in tqdm(list(range(config.num_epochs)), desc='epoch'):
-            for _ in tqdm(list(range(train_data.num_batches)), desc='batch'):
-                batch = train_data.next_batch()
-                image_files, sentences, masks = batch
-                images = self.paernt.image_loader.load_images(image_files)
-
-                conv_features = self.parent.extract_features(images, self.config.batch_size) #extract image features using vgg19
-
-
-                feed_dict = {self.sentences: sentences, #removed images bc already got image features
-                             self.masks: masks, 
-                             self.conv_feats: conv_features}
-                # _, summary, global_step = sess.run([self.opt_op,
-                #                                     self.summary,
-                #                                     self.global_step],
-                #                                     feed_dict=feed_dict)
-                _, global_step = sess.run([self.opt_op,
-                                                    self.global_step],
-                                                   feed_dict=feed_dict)
-                if (global_step + 1) % config.save_period == 0:
-                    self.save()
-                #train_writer.add_summary(summary, global_step)
-            train_data.reset()
-
-        self.save()
-        train_writer.close()
-        #print("Training complete.")
-'''

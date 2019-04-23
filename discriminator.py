@@ -122,6 +122,8 @@ class Discriminator(object):
         self.predictions = predictions
         self.truth_prob = truth_prob
 
+        print("dis predictions: " + str(predictions.shape))
+        print("dis truth_prob: " + str(truth_prob.shape))
         self.input_x = input_x
         self.input_y = input_y
         self.dropout_keep_prob = dropout_keep_prob

@@ -4,13 +4,15 @@ import pandas as pd
 from tqdm import tqdm
 import string
 from nltk.tokenize import word_tokenize
-
+import math
 class Vocabulary(object):
-    def __init__(self, size, save_file=None):
+    def __init__(self, size, ctrl_symbols, save_file=None):
         self.size = size
         self.words = []
         self.word2idx = {}
         self.word_frequencies = []
+        self.ctrl_symbols = ctrl_symbols
+        self.idx_head = len(self.ctrl_symbols)
         if save_file is not None:
             self.load(save_file)
 
@@ -23,7 +25,7 @@ class Vocabulary(object):
 
         assert self.size <= len(word_counts.keys())
 
-        for i, pred in enumerate(['<S>', '<UNK>']):
+        for i, pred in enumerate(self.ctrl_symbols):
             self.words.append(pred)
             self.word2idx[pred] = i
             self.word_frequencies.append(1.0)
@@ -35,7 +37,7 @@ class Vocabulary(object):
         for idx in range(self.size):
             word, frequency = word_counts[idx]
             self.words.append(word)
-            self.word2idx[word] = idx + 2
+            self.word2idx[word] = idx + self.idx_head
             self.word_frequencies.append(frequency)
 
         self.word_frequencies = np.array(self.word_frequencies)
@@ -47,6 +49,8 @@ class Vocabulary(object):
         """ Tokenize a sentence, and translate each token into its index
             in the vocabulary. """
         words = word_tokenize(sentence.lower())
+        current_length = len(words)
+
         word_idxs = []
         for w in words:
             if w in self.word2idx.keys():
@@ -54,19 +58,30 @@ class Vocabulary(object):
             else:
                 word_idxs.append(self.word2idx['<UNK>'])
 
-        return word_idxs
+        return word_idxs, current_length
 
     def get_sentence(self, idxs):
         """ Translate a vector of indicies into a sentence. """
         words = [self.words[i] for i in idxs]
-        if words[-1] != '.':
+
+        #print(words)
+        #print('words shape ' + str(np.array(words).shape))
+
+        if (words[-1] != '.'):
             words.append('.')
         length = np.argmax(np.array(words)=='.') + 1
         words = words[:length]
+
+        for i in range (len(words)): 
+            if not isinstance(words[i], str):
+                words[i] = ""
+        #print(words)
+        
         sentence = "".join([" "+w if not w.startswith("'") \
                             and w not in string.punctuation \
                             else w for w in words]).strip()
         return sentence
+
 
     def save(self, save_file):
         """ Save the vocabulary to a file. """
@@ -74,7 +89,7 @@ class Vocabulary(object):
         #print("index:"+str(len(list(range(self.size)))))
         #print("freq:"+str(len(self.word_frequencies)))
         data = pd.DataFrame({'word': self.words,
-                             'index': list(range(self.size+2)),
+                             'index': list(range(self.size + self.idx_head)),
                              'frequency': self.word_frequencies})
         data.to_csv(save_file)
 
@@ -83,5 +98,5 @@ class Vocabulary(object):
         assert os.path.exists(save_file)
         data = pd.read_csv(save_file)
         self.words = data['word'].values
-        self.word2idx = {self.words[i]:i for i in range(self.size)}
+        self.word2idx = {self.words[i]:i for i in range(self.size + self.idx_head)}
         self.word_frequencies = data['frequency'].values

@@ -72,8 +72,8 @@ def main(argv):
             #image_path = 'D:/download/COCO/train/images/COCO_train2014_000000318556.jpg'
             #image_loader = ImageLoader('./utils/ilsvrc_2012_mean.npy')
 
-            data = prepare_train_data(config)
-            #model = CaptionGenerator(config)
+            data = prepare_train_data(config) 
+            
             sess.run(tf.global_variables_initializer())
             if FLAGS.load:
                 model.load(sess, FLAGS.model_file)
@@ -88,9 +88,11 @@ def main(argv):
             print("EVALUATING")
             # evaluation phase
             eval_data= prepare_eval_data(config)
-            model.load(sess, FLAGS.model_file)
+            #model.load(sess, FLAGS.model_file)
             #sess.run(tf.global_variables_initializer())
             #tf.get_default_graph().finalize()
+            #saver = tf.train.Saver(tf.global_variables())
+            #saver.restore(sess,FlAGS.model_file)
             model.eval(sess, eval_data)
 
         elif FLAGS.phase == 'test_loaded_cnn':
