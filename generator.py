@@ -111,7 +111,7 @@ class Generator(object):
         #^the image feats being fed into the encoder is what makes the generator conditional
         last_state = encoder_state 
 
-        start_token = tf.constant(config._START_, tf.int32, [batch_size])
+        start_token = tf.constant(config.START, tf.int32, [batch_size])
         # Generate the words one by one
         for idx in range(num_steps):
             #first step: start token. otherwise, embed last word
@@ -153,7 +153,7 @@ class Generator(object):
                 # During testing the input to current time stamp of LSTM is the previous time stamp output.
                 last_word = prediction
 
-            #tf.get_variable_scope().reuse_variables()
+            tf.get_variable_scope().reuse_variables()
 
         self.output_ids = output_ids
         self.output_probs = output_probs
@@ -230,7 +230,7 @@ class Generator(object):
         self.pred_probs = g_prob
         print("Generator built.")
 
-    def generate(self, sess, given_tokens, conv_features, len):
+    def generate(self, sess, given_tokens, conv_features):
         #print("Generating tokens...")
         #len for debugging
 
@@ -238,7 +238,7 @@ class Generator(object):
                      self.conv_features: conv_features}
         return sess.run(self.predictions, feed_dict=feed_dict)
     
-    def pretrain(self, sess, sentences, conv_features, len):
+    def pretrain(self, sess, sentences, conv_features):
         #print ("Training the model for one batch..")
         #len for debugging
 

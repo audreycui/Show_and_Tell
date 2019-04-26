@@ -146,7 +146,7 @@ class BasicS2SModel(object):
            
         # prediction sample for validation
         self.predictions = tf.identity(train_dec_outputs.sample_id, name='valid_preds')
-        self.predictions = tf.squeeze(self.predictions)
+        #self.predictions = tf.squeeze(self.predictions)
         
         self.setup_rewards() #rewards for adversarial training
     
@@ -178,7 +178,7 @@ class BasicS2SModel(object):
 
         
         self.predictions = tf.identity(infer_dec_outputs.sample_id, name='predictions')
-        print("predictions shape " + str((self.predictions).shape))
+        #print("predictions shape " + str((self.predictions).shape))
 
         #self.predictions = tf.squeeze(self.predictions)
         #print(self.predictions)
@@ -235,7 +235,7 @@ class BasicS2SModel(object):
             self.initial_state = tuple(initial_state)
         else:
             # we use dynamic batch size
-            #self.batch_size = tf.shape(self.encoder_inputs)[0]     
+            self.batch_size = tf.shape(self.encoder_inputs)[0]     
             initial_state = [self.decode_initial_state for i in range(self.num_layers)]
             cell_state = dec_cell[0].zero_state(dtype=tf.float32, batch_size = self.batch_size)
             initial_state[0] = cell_state.clone(cell_state=initial_state[0])
@@ -243,7 +243,7 @@ class BasicS2SModel(object):
             
         #print(self.initial_state)
         self.dec_cell = tf.contrib.rnn.MultiRNNCell(dec_cell)
-        print("dec_cell " + str(dec_cell))
+        #print("dec_cell " + str(dec_cell))
         self.output_layer = Dense(self.vocab_size, kernel_initializer = tf.truncated_normal_initializer(mean = 0.0, stddev=0.1))
         if self.is_train:
             self.setup_training_decoder_layer()
@@ -254,7 +254,7 @@ class BasicS2SModel(object):
                 self.setup_inference_decoder_layer()
 
     def setup_rewards(self):
-
+        return
         self.rewards = tf.placeholder(tf.float32,
                              shape=[self.batch_size,],
                              name="rewards")

@@ -60,13 +60,17 @@ class Vocabulary(object):
 
         return word_idxs, current_length
 
+    def get_sentence_bad(self, idxs):
+        """ Translate a vector of indicies into a sentence. """
+        return  [self.words[i] for i in idxs]
+
     def get_sentence(self, idxs):
         """ Translate a vector of indicies into a sentence. """
         words = [self.words[i] for i in idxs]
 
         #print(words)
         #print('words shape ' + str(np.array(words).shape))
-
+        
         if (words[-1] != '.'):
             words.append('.')
         length = np.argmax(np.array(words)=='.') + 1

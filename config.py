@@ -16,17 +16,18 @@ class Config(object):
         # about the model architecture
         self.cnn = 'vgg19'               # changed from vgg16 to vgg19
         self.max_caption_length = 70
-        self.dim_embedding = 512
-        self.num_lstm_units = 512
+        self.hidden_size_global = 128
+        self.dim_embedding = self.hidden_size_global
+        self.num_lstm_units = self.hidden_size_global
         self.num_initalize_layers = 1 ## Changed from 2 to 1    # 1 or 2
-        self.dim_initalize_layer = 512
+        self.dim_initalize_layer = self.hidden_size_global
         self.num_attend_layers = 2       # 1 or 2
-        self.dim_attend_layer = 512
+        self.dim_attend_layer = self.hidden_size_global
         self.num_decode_layers = 3    ## Changed from 2 to 1   # 1 or 2
         self.dim_decode_layer = 1024
         self.image_feat_dim = 4096*1 #for both image features
-        self.G_hidden_size = 512
-        self.D_hidden_size = 512
+        self.G_hidden_size = self.hidden_size_global
+        self.D_hidden_size = self.hidden_size_global
         self.combine_type = 'concat' #'concat' or 'bilinear pooling'
 
         #added for seq2seq
@@ -42,14 +43,14 @@ class Config(object):
         self.fc_activity_regularizer_scale = 0.0
         self.conv_kernel_regularizer_scale = 1e-4
         self.conv_activity_regularizer_scale = 0.0
-        self.fc_drop_rate = 0.5
-        self.lstm_drop_rate = 0.3
+        self.fc_drop_rate = 0.2
+        self.lstm_drop_rate = 0.2
         self.attention_loss_factor = 0.01
         
         # about the optimization
         #self.num_epochs = 2000
         self.total_epochs = 200 #added for gan
-        self.pretrain_g_epochs=5000 #added for gan
+        self.pretrain_g_epochs=50 #added for gan
         self.pretrain_d_epochs=1000 #added for gan
         self.d_filter_sizes=[3, 5, 5, 5] #added for discriminator
         self.d_num_filters=[50, 80, 80, 100] #added for discriminator
@@ -96,6 +97,7 @@ class Config(object):
         self.vocabulary_size = 10000
         self.ctrl_symbols = ['<S>', '<P>', '<E>', '<UNK>']
         self.vocabulary_file = base_dir + '/vocabulary.csv'
+        self.START = 0
         self._START_ = 0
         self._PAD_ = 1
         self._END_ = 2
