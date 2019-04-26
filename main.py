@@ -58,12 +58,14 @@ def main(argv):
     np.random.seed(config.seed)
     tf.random.set_random_seed(config.seed)
 
+    is_trainable = FLAGS.phase == 'train'
+
     if FLAGS.model == 'SeqGAN':
-        model = SeqGAN(config)
+        model = SeqGAN(config, is_trainable)
     elif FLAGS.model == 'Show&Tell':
         model = CaptionGenerator(config)
     else:
-        model = SeqGAN(config)
+        model = SeqGAN(config, is_trainable)
 
     with tf.Session() as sess:
         print("FLAG: " + FLAGS.phase)

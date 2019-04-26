@@ -43,19 +43,22 @@ def get_optimizer(opt):
     else:
         assert(False)
     return optfn
-    
+
 class TestS2SModel(object):
-    def __init__(self, vocab, batch_size = 8, dim_size=128, rnn_cell = 'gru', num_layers=2, max_gradient_norm=5.0, atten_size=30, 
+    def __init__(self, config, is_trainable, batch_size = 8, dim_size=128, rnn_cell = 'gru', num_layers=2, max_gradient_norm=5.0, atten_size=30, 
                  learning_rate=0.001, learning_rate_decay_factor=0.98, dropout=0.2,max_inference_lenght=50,
                  max_source_len = 10, max_target_len = 10,beam_size =3, optimizer="adam", mode ='train',
                  use_beam_search = False):
-        assert mode in ['train', 'inference']
-        self.start_token = vocab.get(_START_)
-        self.end_token = vocab.get(_END_)
-        self.train_phase = True if mode == 'train' else False
+        self.config = config
+        self.train_phase = is_trainable
+
+        self.start_token = config._START_
+        self.end_token = config._END_
+        self.vocab_size = config.vocabulary_size
+
         self.cell_name = rnn_cell
         self.dim_size = dim_size
-        self.vocab_size = len(vocab)
+
         self.num_layers = num_layers
         self.keep_prob_config = 1.0 - dropout
         self.atten_size = atten_size
@@ -183,7 +186,7 @@ class TestS2SModel(object):
                     impute_finished=True,
                     maximum_iterations=self.max_inference_lenght)
         # [batch_size x dec_sentence_length], tf.int32
-        print('infer dec outputs shape ' + str(np.array(infer_dec_outputs)))
+        #print('infer dec outputs shape ' + str(np.array(infer_dec_outputs)))
         self.predictions = tf.identity(infer_dec_outputs.sample_id, name='predictions')
             
     def setup_beam_search_decoder_layer(self):
@@ -244,7 +247,7 @@ class TestS2SModel(object):
             initial_state[0] = cell_state.clone(cell_state=initial_state[0])
             self.initial_state = tuple(initial_state)
             
-        print(self.initial_state)
+        #print(self.initial_state)
         self.dec_cell = tf.contrib.rnn.MultiRNNCell(dec_cell)
         self.output_layer = Dense(self.vocab_size,kernel_initializer = tf.truncated_normal_initializer(mean = 0.0, stddev=0.1))
         if self.train_phase:

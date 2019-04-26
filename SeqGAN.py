@@ -132,7 +132,7 @@ def idx2sent(indices, reverse_vocab):
     return " ".join([idx2token(idx, reverse_vocab) for idx in indices])
 
 class SeqGAN(BaseModel):
-    def __init__(self, config):
+    def __init__(self, config, is_trainable):
 
         '''
 
@@ -150,9 +150,11 @@ class SeqGAN(BaseModel):
             an image in the tensorboard'''
         super().__init__(config)
 
+        self.is_trainable = is_trainable
+
         #sentences = np.array(sentences)
         #self.generator = Generator(self, config)
-        self.generator = None
+        self.generator = TestS2SModel(config, is_trainable, use_beam_search=False, num_layers=self.config.num_decode_layers)
         #self.generator = BasicS2SModel(self, config)
         #self.discriminator = Discriminator(self, config) 
         self.discriminator = None
@@ -194,7 +196,6 @@ class SeqGAN(BaseModel):
 
 
     def train(self, sess_unused, train_data):
-        test_model = TestS2SModel(vocab=vocab, num_layers=self.config.num_decode_layers)
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
 
@@ -224,7 +225,7 @@ class SeqGAN(BaseModel):
                         target_batch_tokens.append(tokens)
                         dec_sentence_lengths.append(sent_len)
             
-                    batch_preds, batch_loss = test_model.train_one_step(sess,input_batch_tokens,enc_sentence_lengths,target_batch_tokens,dec_sentence_lengths)
+                    batch_preds, batch_loss = this.generator.train_one_step(sess,input_batch_tokens,enc_sentence_lengths,target_batch_tokens,dec_sentence_lengths)
                     epoch_loss += batch_loss
                     #loss_history.append(batch_loss)
                     all_preds.append(batch_preds)
@@ -238,7 +239,7 @@ class SeqGAN(BaseModel):
                         print('Prediction:', idx2sent(pred, reverse_vocab=reverse_vocab))
                         print('Target:', target_sent)
             
-            test_model.save_model(sess, './models')
+            this.generator.save_model(sess, './models')
 
     def train_old(self, sess, train_data):
         '''
@@ -449,7 +450,7 @@ class SeqGAN(BaseModel):
     def eval(self, sess_unused, eval_data):
         vocabulary, reverse_vocab, max_vocab_size = build_vocab(all_target_sentences)
 
-        test_model = TestS2SModel(vocab=vocabulary, mode="inference",use_beam_search=False, num_layers=self.config.num_decode_layers)
+
 
         with tf.Session() as sess:
             test_model.restore_model(sess, './')
