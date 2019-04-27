@@ -30,45 +30,45 @@ from test_model import TestS2SModel
 #removed parameters for seqgan constructor, generator, disciminator (parameters are already in config)
 
 enc_sentence_length = 4096
-dec_sentence_length = 50
+dec_sentence_length = 70
 
 vgg_dir = 'D:/download/art_desc/train/images_vgg/'
 # Batch_size: 1
 input_batches = [
-    [np.load(vgg_dir+'art_desc1.npy')], 
-    [np.load(vgg_dir+'art_desc2.npy')], 
-    [np.load(vgg_dir+'art_desc3.npy')], 
-    [np.load(vgg_dir+'art_desc4.npy')], 
-    [np.load(vgg_dir+'art_desc6.npy')], 
-    [np.load(vgg_dir+'art_desc7.npy')], 
-    [np.load(vgg_dir+'art_desc8.npy')], 
-    [np.load(vgg_dir+'art_desc9.npy')],
-    [np.load(vgg_dir+'art_desc11.npy')], 
-    [np.load(vgg_dir+'art_desc12.npy')],
-    [np.load(vgg_dir+'art_desc13.npy')], 
-    [np.load(vgg_dir+'art_desc14.npy')], 
-    [np.load(vgg_dir+'art_desc16.npy')], 
-    [np.load(vgg_dir+'art_desc17.npy')],
-    [np.load(vgg_dir+'art_desc18.npy')], 
-    [np.load(vgg_dir+'art_desc19.npy')]] 
+    [np.load(vgg_dir+'art_desc1.npy'), 
+     np.load(vgg_dir+'art_desc2.npy'), 
+     np.load(vgg_dir+'art_desc3.npy'), 
+     np.load(vgg_dir+'art_desc4.npy'), 
+     np.load(vgg_dir+'art_desc6.npy'),
+     np.load(vgg_dir+'art_desc7.npy'), 
+     np.load(vgg_dir+'art_desc8.npy'),
+     np.load(vgg_dir+'art_desc9.npy')],
+    [np.load(vgg_dir+'art_desc11.npy'), 
+     np.load(vgg_dir+'art_desc12.npy'),
+     np.load(vgg_dir+'art_desc13.npy'), 
+     np.load(vgg_dir+'art_desc14.npy'), 
+     np.load(vgg_dir+'art_desc16.npy'), 
+     np.load(vgg_dir+'art_desc17.npy'),
+     np.load(vgg_dir+'art_desc18.npy'), 
+     np.load(vgg_dir+'art_desc19.npy')]] 
 
 target_batches = [
-    ['The close range of this photograph of peeling paint precludes the viewer from gaining any foothold into the space of the picture, emphasizing its ultimate flatness. Siskind was especially drawn to surfaces that resembled the canvases of the Abstract Expressionist painters, with whom he was friends.'],
-    ['Metal Hook is one of Siskind\'s first photographs that truly focuses on the abstract visual language of ordinary objects.  The flatness of the image as a whole also serves to assert the graphic quality of the metal hook itself as a sign/symbol for male and female, thus suggesting a level of content in addition to that of form.'],
-    ['One of Siskind\'s later works, Recife (Olinda) 8 was taken during his travels in Northeastern Brazil.  The result is that we are forced to remain as viewers attached to the abstract surface - noting with pleasure the additional details of age, texture, misaligned lines, and accidental drips.'],
-    ['Siskind\'s first pictures show a decidedly more straightforward approach to picture making than the later work for which he became known. Although the male figure is a specific individual and technically the focal point, he is flattened in his own reflection against the back wall, pressed into the service of the overall design of the photograph.'],
-    ['The Blue Series followed the Red Series of paintings and this is one of its most successful examples. The rectangular shapes of various shades of blue and green are suspended within a resplendent azure surface.'],
-    ['This is one of the paintings belonging to the Red Series. Here the artist immersed himself completely into the exploration of the color red, one of the most expressive among the primary colors.'],
-    ['In this famous cartoon of 1946 Ad Reinhardt tried to encapsulate the essence of the artistic modernism with its history and inherent conflicts within the American context. The tree of modern art has its roots deep in history - the Greeks are here, and so are Persian miniatures and Japanese prints.'],
-    ['This early composition by Ad Reinhardt exhibits the artist\'s profound interest and understanding of the Cubist art of Pablo Picasso and George Braque. The palette is typical of the style and is comprised of four colors essential for a Cubist painting: black, white, brown, and gray.'],
-    ['Here he is obviously quoting Stuart Davis, the American artist who was a key influence on young Reinhardt. Painted in the same year as the Cubist gouache, this canvas presents quite a stark contrast with Reinhardt\'s earlier artistic pursuits'],
-    ['In 1962, the date of this painting, Gottlieb spoke about the emotional quality of color in his work. Beginning in 1956, Gottlieb\'s monumental Burst paintings developed from the Imaginary Landscapes, focusing on a simplification of space and color from the earlier series.'],
-    ['Painted just a year before Gottlieb\'s death, this is one of the last in this series of Burst paintings. The picture\'s elongated form echoes the vertical composition of his earlier paintings, emphasizing the empty space between the lower and upper portions of the picture.'],
-    ['Gottlieb began his Imaginary Landscapes series in 1951. This stylistic shift is reinforced by the Imaginary Landscapes\' addition of brighter tones and colors than the earlier Pictographs.'],
-    ['The first of Gottlieb\'s Unstill Life series dates from 1948, but this is a larger and later work from the same series. Here, Gottlieb employs an uncompromising degree of abstraction and modern slickness with its palette of blacks, grays, and reds.'],
-    ['Vigil confronts us directly with several mask-like faces that suggest Nonwestern sources (African, Sepik e.g.) against a dark background that suggests night, and perhaps the need to be watchful. This painting is typical of Gottlieb\'s Pictograph paintings with the geometric compartmentalization of the flat space and its use of seemingly mythic signs and symbols.'],
-    ['After leaving New York permanently and traveling through America and Canada, Martin returned to New Mexico to live in isolation.  Although Martin did not activate her filmmaking career, Gabriel was another effort in exploring landscape, prompting an understanding of humans through their reaction to nature.'],
-    ['Around 1964, Martin began using acrylic paint rather than oil and simultaneously replaced colored pencils with graphite. Martin in fact claimed that the idea of a grid first entered her mind when she was thinking about the innocence of trees.']]
+    ['The close range of this photograph of peeling paint precludes the viewer from gaining any foothold into the space of the picture, emphasizing its ultimate flatness. Siskind was especially drawn to surfaces that resembled the canvases of the Abstract Expressionist painters, with whom he was friends.',
+     'Metal Hook is one of Siskind\'s first photographs that truly focuses on the abstract visual language of ordinary objects.  The flatness of the image as a whole also serves to assert the graphic quality of the metal hook itself as a sign/symbol for male and female, thus suggesting a level of content in addition to that of form.',
+     'One of Siskind\'s later works, Recife (Olinda) 8 was taken during his travels in Northeastern Brazil.  The result is that we are forced to remain as viewers attached to the abstract surface - noting with pleasure the additional details of age, texture, misaligned lines, and accidental drips.',
+     'Siskind\'s first pictures show a decidedly more straightforward approach to picture making than the later work for which he became known. Although the male figure is a specific individual and technically the focal point, he is flattened in his own reflection against the back wall, pressed into the service of the overall design of the photograph.',
+     'The Blue Series followed the Red Series of paintings and this is one of its most successful examples. The rectangular shapes of various shades of blue and green are suspended within a resplendent azure surface.',
+     'This is one of the paintings belonging to the Red Series. Here the artist immersed himself completely into the exploration of the color red, one of the most expressive among the primary colors.',
+     'In this famous cartoon of 1946 Ad Reinhardt tried to encapsulate the essence of the artistic modernism with its history and inherent conflicts within the American context. The tree of modern art has its roots deep in history - the Greeks are here, and so are Persian miniatures and Japanese prints.',
+     'This early composition by Ad Reinhardt exhibits the artist\'s profound interest and understanding of the Cubist art of Pablo Picasso and George Braque. The palette is typical of the style and is comprised of four colors essential for a Cubist painting: black, white, brown, and gray.'],
+    ['Here he is obviously quoting Stuart Davis, the American artist who was a key influence on young Reinhardt. Painted in the same year as the Cubist gouache, this canvas presents quite a stark contrast with Reinhardt\'s earlier artistic pursuits',
+     'In 1962, the date of this painting, Gottlieb spoke about the emotional quality of color in his work. Beginning in 1956, Gottlieb\'s monumental Burst paintings developed from the Imaginary Landscapes, focusing on a simplification of space and color from the earlier series.',
+     'Painted just a year before Gottlieb\'s death, this is one of the last in this series of Burst paintings. The picture\'s elongated form echoes the vertical composition of his earlier paintings, emphasizing the empty space between the lower and upper portions of the picture.',
+     'Gottlieb began his Imaginary Landscapes series in 1951. This stylistic shift is reinforced by the Imaginary Landscapes\' addition of brighter tones and colors than the earlier Pictographs.',
+     'The first of Gottlieb\'s Unstill Life series dates from 1948, but this is a larger and later work from the same series. Here, Gottlieb employs an uncompromising degree of abstraction and modern slickness with its palette of blacks, grays, and reds.',
+     'Vigil confronts us directly with several mask-like faces that suggest Nonwestern sources (African, Sepik e.g.) against a dark background that suggests night, and perhaps the need to be watchful. This painting is typical of Gottlieb\'s Pictograph paintings with the geometric compartmentalization of the flat space and its use of seemingly mythic signs and symbols.',
+     'After leaving New York permanently and traveling through America and Canada, Martin returned to New Mexico to live in isolation.  Although Martin did not activate her filmmaking career, Gabriel was another effort in exploring landscape, prompting an understanding of humans through their reaction to nature.',
+     'Around 1964, Martin began using acrylic paint rather than oil and simultaneously replaced colored pencils with graphite. Martin in fact claimed that the idea of a grid first entered her mind when she was thinking about the innocence of trees.']]
     
 all_target_sentences = []
 for target_batch in target_batches:
@@ -222,10 +222,11 @@ class SeqGAN(BaseModel):
                                      vocab=vocab,
                                      max_sentence_length=dec_sentence_length,
                                      is_target=True)
+                        #print("len:"+str(sent_len))
                         target_batch_tokens.append(tokens)
                         dec_sentence_lengths.append(sent_len)
-            
-                    batch_preds, batch_loss = this.generator.train_one_step(sess,input_batch_tokens,enc_sentence_lengths,target_batch_tokens,dec_sentence_lengths)
+        
+                    batch_preds, batch_loss = self.generator.train_one_step(sess,input_batch_tokens,enc_sentence_lengths,target_batch_tokens,dec_sentence_lengths)
                     epoch_loss += batch_loss
                     #loss_history.append(batch_loss)
                     all_preds.append(batch_preds)
@@ -239,7 +240,7 @@ class SeqGAN(BaseModel):
                         print('Prediction:', idx2sent(pred, reverse_vocab=reverse_vocab))
                         print('Target:', target_sent)
             
-            this.generator.save_model(sess, './models')
+            self.generator.save_model(sess, './models')
 
     def train_old(self, sess, train_data):
         '''
@@ -453,46 +454,46 @@ class SeqGAN(BaseModel):
 
 
         with tf.Session() as sess:
-            test_model.restore_model(sess, './')
+            self.generator.restore_model(sess, './')
             batch_preds = []
             batch_tokens = []
             batch_sent_lens = []
             input_batches = [
-                [np.load(vgg_dir+'art_desc1.npy')], 
-                [np.load(vgg_dir+'art_desc2.npy')], 
-                [np.load(vgg_dir+'art_desc3.npy')], 
-                [np.load(vgg_dir+'art_desc4.npy')], 
-                [np.load(vgg_dir+'art_desc6.npy')], 
-                [np.load(vgg_dir+'art_desc7.npy')], 
-                [np.load(vgg_dir+'art_desc8.npy')], 
-                [np.load(vgg_dir+'art_desc9.npy')],
-                [np.load(vgg_dir+'art_desc21.npy')], 
-                [np.load(vgg_dir+'art_desc22.npy')],
-                [np.load(vgg_dir+'art_desc23.npy')], 
-                [np.load(vgg_dir+'art_desc24.npy')], 
-                [np.load(vgg_dir+'art_desc26.npy')], 
-                [np.load(vgg_dir+'art_desc31.npy')],
-                [np.load(vgg_dir+'art_desc28.npy')], 
-                [np.load(vgg_dir+'art_desc29.npy')]] 
+                 np.load(vgg_dir+'art_desc1.npy'), 
+                 np.load(vgg_dir+'art_desc2.npy'), 
+                 np.load(vgg_dir+'art_desc3.npy'), 
+                 np.load(vgg_dir+'art_desc4.npy'), 
+                 np.load(vgg_dir+'art_desc6.npy'), 
+                 np.load(vgg_dir+'art_desc7.npy'), 
+                 np.load(vgg_dir+'art_desc8.npy'), 
+                 np.load(vgg_dir+'art_desc9.npy'),
+                 np.load(vgg_dir+'art_desc21.npy'), 
+                 np.load(vgg_dir+'art_desc22.npy'),
+                 np.load(vgg_dir+'art_desc23.npy'), 
+                 np.load(vgg_dir+'art_desc24.npy'), 
+                 np.load(vgg_dir+'art_desc26.npy'), 
+                 np.load(vgg_dir+'art_desc31.npy'),
+                 np.load(vgg_dir+'art_desc28.npy'), 
+                 np.load(vgg_dir+'art_desc29.npy')]
             
 
             target_batches = [
-                ['The close range of this photograph of peeling paint precludes the viewer from gaining any foothold into the space of the picture, emphasizing its ultimate flatness. Siskind was especially drawn to surfaces that resembled the canvases of the Abstract Expressionist painters, with whom he was friends.'],
-                ['Metal Hook is one of Siskind\'s first photographs that truly focuses on the abstract visual language of ordinary objects.  The flatness of the image as a whole also serves to assert the graphic quality of the metal hook itself as a sign/symbol for male and female, thus suggesting a level of content in addition to that of form.'],
-                ['One of Siskind\'s later works, Recife (Olinda) 8 was taken during his travels in Northeastern Brazil.  The result is that we are forced to remain as viewers attached to the abstract surface - noting with pleasure the additional details of age, texture, misaligned lines, and accidental drips.'],
-                ['Siskind\'s first pictures show a decidedly more straightforward approach to picture making than the later work for which he became known. Although the male figure is a specific individual and technically the focal point, he is flattened in his own reflection against the back wall, pressed into the service of the overall design of the photograph.'],
-                ['The Blue Series followed the Red Series of paintings and this is one of its most successful examples. The rectangular shapes of various shades of blue and green are suspended within a resplendent azure surface.'],
-                ['This is one of the paintings belonging to the Red Series. Here the artist immersed himself completely into the exploration of the color red, one of the most expressive among the primary colors.'],
-                ['In this famous cartoon of 1946 Ad Reinhardt tried to encapsulate the essence of the artistic modernism with its history and inherent conflicts within the American context. The tree of modern art has its roots deep in history - the Greeks are here, and so are Persian miniatures and Japanese prints.'],
-                ['This early composition by Ad Reinhardt exhibits the artist\'s profound interest and understanding of the Cubist art of Pablo Picasso and George Braque. The palette is typical of the style and is comprised of four colors essential for a Cubist painting: black, white, brown, and gray.'],
-                ['Martin destroyed much of her work made before the late 1950s when she shifted to a grid format, so works from this period of her oeuvre are scarce. Her early style has been compared to that of Arshile Gorky and, like his works, Untitled displays Martin\'s debt to Surrealism and Abstract Expressionism.'],
-                ['Untitled XXI is an example of Martin\'s work after the mid-1970s. Though Untitled XXI is not explicitly designated as a landscape, by name or representation, Martin throughout her artistic life attempted to capture the sublime of everyday nature through her continued variation on the square format.'],
-                ['With Window, Martin\'s forms became less organic and more rigid as she experimented with rectangular forms, anticipating the later introduction of the grid\'s mathematical precision in her work. Although this work was created during the first years of Martin\'s final return to New York, Window still incorporates a Southwestern palette, while abandoning the curved line of earlier work.'],
-                ['Dropping a Han Dynasty Urn, an early work by the artist, demonstrates his show-stopping conceptual brilliance, and desire to provoke controversy. The Han dynasty is considered a defining moment in Chinese civilization.'],
-                ['Study of Perspective Tiananmen Square was part of a series begun in 1995 and completed in 2003. In what first appears to be a classic tourist snapshot, Ai sticks his middle finger up at Tiananmen Square Gate.'],
-                ['Ryder\'s moon both illuminates and obscures through the shadows it casts. The painting is one of Ryder\'s most abstract, until closer observation draws us past its compositionally powerful surface and we appreciate the represented scene more fully.'],
-                ['Surveillance Camera, an austere and quite beautiful marble sculpture, reminds us that the artist is watching those who watch him. The artist, in turn, tracks the surveillance cameras, vans, and plain-clothes police officers that monitor his gates.'],
-                ['This work compresses a ton of traditional pu\'er tea leaves into the space of one cubic meter. While in the West, drinking tea (especially from Chinese porcelain) has historically been a status symbol, tea is the everyday drink in China.']]
+                 'The close range of this photograph of peeling paint precludes the viewer from gaining any foothold into the space of the picture, emphasizing its ultimate flatness. Siskind was especially drawn to surfaces that resembled the canvases of the Abstract Expressionist painters, with whom he was friends.',
+                 'Metal Hook is one of Siskind\'s first photographs that truly focuses on the abstract visual language of ordinary objects.  The flatness of the image as a whole also serves to assert the graphic quality of the metal hook itself as a sign/symbol for male and female, thus suggesting a level of content in addition to that of form.',
+                 'One of Siskind\'s later works, Recife (Olinda) 8 was taken during his travels in Northeastern Brazil.  The result is that we are forced to remain as viewers attached to the abstract surface - noting with pleasure the additional details of age, texture, misaligned lines, and accidental drips.',
+                 'Siskind\'s first pictures show a decidedly more straightforward approach to picture making than the later work for which he became known. Although the male figure is a specific individual and technically the focal point, he is flattened in his own reflection against the back wall, pressed into the service of the overall design of the photograph.',
+                 'The Blue Series followed the Red Series of paintings and this is one of its most successful examples. The rectangular shapes of various shades of blue and green are suspended within a resplendent azure surface.',
+                 'This is one of the paintings belonging to the Red Series. Here the artist immersed himself completely into the exploration of the color red, one of the most expressive among the primary colors.',
+                 'In this famous cartoon of 1946 Ad Reinhardt tried to encapsulate the essence of the artistic modernism with its history and inherent conflicts within the American context. The tree of modern art has its roots deep in history - the Greeks are here, and so are Persian miniatures and Japanese prints.',
+                 'This early composition by Ad Reinhardt exhibits the artist\'s profound interest and understanding of the Cubist art of Pablo Picasso and George Braque. The palette is typical of the style and is comprised of four colors essential for a Cubist painting: black, white, brown, and gray.',
+                 'Martin destroyed much of her work made before the late 1950s when she shifted to a grid format, so works from this period of her oeuvre are scarce. Her early style has been compared to that of Arshile Gorky and, like his works, Untitled displays Martin\'s debt to Surrealism and Abstract Expressionism.',
+                 'Untitled XXI is an example of Martin\'s work after the mid-1970s. Though Untitled XXI is not explicitly designated as a landscape, by name or representation, Martin throughout her artistic life attempted to capture the sublime of everyday nature through her continued variation on the square format.',
+                 'With Window, Martin\'s forms became less organic and more rigid as she experimented with rectangular forms, anticipating the later introduction of the grid\'s mathematical precision in her work. Although this work was created during the first years of Martin\'s final return to New York, Window still incorporates a Southwestern palette, while abandoning the curved line of earlier work.',
+                 'Dropping a Han Dynasty Urn, an early work by the artist, demonstrates his show-stopping conceptual brilliance, and desire to provoke controversy. The Han dynasty is considered a defining moment in Chinese civilization.',
+                 'Study of Perspective Tiananmen Square was part of a series begun in 1995 and completed in 2003. In what first appears to be a classic tourist snapshot, Ai sticks his middle finger up at Tiananmen Square Gate.',
+                 'Ryder\'s moon both illuminates and obscures through the shadows it casts. The painting is one of Ryder\'s most abstract, until closer observation draws us past its compositionally powerful surface and we appreciate the represented scene more fully.',
+                 'Surveillance Camera, an austere and quite beautiful marble sculpture, reminds us that the artist is watching those who watch him. The artist, in turn, tracks the surveillance cameras, vans, and plain-clothes police officers that monitor his gates.',
+                 'This work compresses a ton of traditional pu\'er tea leaves into the space of one cubic meter. While in the West, drinking tea (especially from Chinese porcelain) has historically been a status symbol, tea is the everyday drink in China.']
             
 
             input_batches = np.squeeze(input_batches)
@@ -501,9 +502,9 @@ class SeqGAN(BaseModel):
                 batch_tokens.append(input_sent)
                 batch_sent_lens.append(len(input_sent))
 
-            #print('batch_tokens shape: ' + str(np.array(batch_tokens).shape))
-            #print('batch_sent_lens shape: ' + str(np.array(batch_sent_lens).shape))
-            batch_preds = test_model.inference(sess, batch_tokens, batch_sent_lens)
+            print('batch_tokens shape: ' + str(np.array(batch_tokens).shape))
+            print('batch_sent_lens shape: ' + str(np.array(batch_sent_lens).shape))
+            batch_preds = self.generator.inference(sess, batch_tokens, batch_sent_lens)
             
             batch_preds = np.squeeze(np.array(batch_preds))
             input_batches = np.squeeze(np.array(input_batches))

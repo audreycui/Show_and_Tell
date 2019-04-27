@@ -260,6 +260,10 @@ class TestS2SModel(object):
     
     def train_one_step(self,sess,encode_input,encode_len,decode_input,decode_len):
         feed_dict = {}
+        #print(np.array(encode_input).shape)
+        #print(np.array(encode_len).shape)
+        #print(np.array(decode_input).shape)
+        #print(np.array(decode_len).shape)
         feed_dict[self.source_tokens] = encode_input
         feed_dict[self.source_length] = encode_len
         feed_dict[self.target_tokens] = decode_input
