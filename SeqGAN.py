@@ -42,8 +42,8 @@ input_batches = [
      np.load(vgg_dir+'art_desc6.npy'),
      np.load(vgg_dir+'art_desc7.npy'), 
      np.load(vgg_dir+'art_desc8.npy'),
-     np.load(vgg_dir+'art_desc9.npy')],
-    [np.load(vgg_dir+'art_desc11.npy'), 
+     np.load(vgg_dir+'art_desc9.npy'),
+     np.load(vgg_dir+'art_desc11.npy'), 
      np.load(vgg_dir+'art_desc12.npy'),
      np.load(vgg_dir+'art_desc13.npy'), 
      np.load(vgg_dir+'art_desc14.npy'), 
@@ -60,8 +60,8 @@ target_batches = [
      'The Blue Series followed the Red Series of paintings and this is one of its most successful examples. The rectangular shapes of various shades of blue and green are suspended within a resplendent azure surface.',
      'This is one of the paintings belonging to the Red Series. Here the artist immersed himself completely into the exploration of the color red, one of the most expressive among the primary colors.',
      'In this famous cartoon of 1946 Ad Reinhardt tried to encapsulate the essence of the artistic modernism with its history and inherent conflicts within the American context. The tree of modern art has its roots deep in history - the Greeks are here, and so are Persian miniatures and Japanese prints.',
-     'This early composition by Ad Reinhardt exhibits the artist\'s profound interest and understanding of the Cubist art of Pablo Picasso and George Braque. The palette is typical of the style and is comprised of four colors essential for a Cubist painting: black, white, brown, and gray.'],
-    ['Here he is obviously quoting Stuart Davis, the American artist who was a key influence on young Reinhardt. Painted in the same year as the Cubist gouache, this canvas presents quite a stark contrast with Reinhardt\'s earlier artistic pursuits',
+     'This early composition by Ad Reinhardt exhibits the artist\'s profound interest and understanding of the Cubist art of Pablo Picasso and George Braque. The palette is typical of the style and is comprised of four colors essential for a Cubist painting: black, white, brown, and gray.',
+     'Here he is obviously quoting Stuart Davis, the American artist who was a key influence on young Reinhardt. Painted in the same year as the Cubist gouache, this canvas presents quite a stark contrast with Reinhardt\'s earlier artistic pursuits',
      'In 1962, the date of this painting, Gottlieb spoke about the emotional quality of color in his work. Beginning in 1956, Gottlieb\'s monumental Burst paintings developed from the Imaginary Landscapes, focusing on a simplification of space and color from the earlier series.',
      'Painted just a year before Gottlieb\'s death, this is one of the last in this series of Burst paintings. The picture\'s elongated form echoes the vertical composition of his earlier paintings, emphasizing the empty space between the lower and upper portions of the picture.',
      'Gottlieb began his Imaginary Landscapes series in 1951. This stylistic shift is reinforced by the Imaginary Landscapes\' addition of brighter tones and colors than the earlier Pictographs.',
@@ -122,15 +122,6 @@ def sent2idx(sent, vocab, max_sentence_length=enc_sentence_length, is_target=Fal
     else:
         return [token2idx(token, vocab) for token in tokens] + [1] * pad_length, current_length
 
-def idx2token(idx, reverse_vocab):
-    if idx in reverse_vocab:
-        return reverse_vocab[idx]
-    else:
-        return '_UNK_'
-
-def idx2sent(indices, reverse_vocab):
-    return " ".join([idx2token(idx, reverse_vocab) for idx in indices])
-
 class SeqGAN(BaseModel):
     def __init__(self, config, is_trainable):
 
@@ -152,23 +143,12 @@ class SeqGAN(BaseModel):
 
         self.is_trainable = is_trainable
 
-        #sentences = np.array(sentences)
-        #self.generator = Generator(self, config)
-        self.generator = TestS2SModel(config, is_trainable, use_beam_search=False, num_layers=self.config.num_decode_layers)
+        self.generator = Generator(self, config)
+        #self.generator = TestS2SModel(config, is_trainable)
         #self.generator = BasicS2SModel(self, config)
-        #self.discriminator = Discriminator(self, config) 
-        self.discriminator = None
-        #self.log_generation = False
-
-        """
-    def build(self):
-        config = self.config
-        self.net = VGG19(weights='imagenet')
-        self.model = Model(input= self.net.input, output= self.net.get_layer('fc2').output)
-
-        self.num_ctx = 8
-        self.dim_ctx = 512
-    """
+        self.discriminator = Discriminator(self, config) 
+        #self.discriminator = None
+        self.log_generation = False 
 
     def get_nn(self):
         return self.nn
@@ -179,70 +159,51 @@ class SeqGAN(BaseModel):
         return self.image_loader.extract_features_mxnet(self.object_model, self.sentiment_model, self.scene_model, images, self.config.batch_size) #extract image features using vgg19
 
     
-    def get_imagefeatures_vgg19(self, image_files):
+    def get_imagefeatures_vgg19(self, image_files, feature_files):
         #images = self.image_loader.load_images_vgg19(image_files)
 
-        return self.image_loader.extract_features_vgg19(self.trained_model, image_files, self.config.batch_size) #extract image features using vgg19
+        return self.image_loader.extract_features_vgg19(self.trained_model, image_files, feature_files, self.config.batch_size) #extract image features using vgg19
     
     def next_batch(self, data, extract=False):
         #print("HERE!!! next batch")
         batch = data.next_batch()
-        image_files, sentences, masks, sent_lens = batch
+        image_files, feature_files, sentences, masks, sent_lens = batch
         if (extract):
-            conv_features = self.get_imagefeatures_vgg19(image_files)
+            conv_features = self.get_imagefeatures_vgg19(image_files, feature_files)
         else:
             conv_features = []
         return sentences, conv_features, sent_lens
 
 
-    def train(self, sess_unused, train_data):
+    def train_test(self, sess_unused, train_data):
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
 
-            num_epoch=200
             loss_history = []
             t0 = time.time()
-            for epoch in tqdm(list(range(num_epoch)), desc='Training Generator'):
-                all_preds = []
-                epoch_loss = 0
-                for input_batch, target_batch in zip(input_batches, target_batches):
-                    input_batch_tokens = []
-                    target_batch_tokens = []
-                    enc_sentence_lengths = []
-                    dec_sentence_lengths = []
-
-                    for input_sent in input_batch:
-                        tokens = input_sent
-                        sent_len = len(input_sent)
-                        input_batch_tokens.append(tokens)
-                        enc_sentence_lengths.append(sent_len)
-
-                    for target_sent in target_batch:
-                        tokens, sent_len = sent2idx(target_sent,
-                                     vocab=vocab,
-                                     max_sentence_length=dec_sentence_length,
-                                     is_target=True)
-                        #print("len:"+str(sent_len))
-                        target_batch_tokens.append(tokens)
-                        dec_sentence_lengths.append(sent_len)
-        
-                    batch_preds, batch_loss = self.generator.train_one_step(sess,input_batch_tokens,enc_sentence_lengths,target_batch_tokens,dec_sentence_lengths)
-                    epoch_loss += batch_loss
+            #for epoch in tqdm(list(range(self.config.num_epochs)), desc='Training Generator'):
+            for batch in tqdm(list(range(1)), desc='Batching'):
+                sentences, conv_features, sent_lens = self.next_batch(train_data, extract=True)
+                for epoch in tqdm(list(range(1000)), desc='Training Generator'):
+                    batch_preds, epoch_loss = self.generator.train_one_step(sess,conv_features,enc_sentence_lengths,sentences,sent_lens)
                     #loss_history.append(batch_loss)
                     all_preds.append(batch_preds)
 
-                #loss_history.append(epoch_loss)
-                if epoch % 10 == 0:
-                    print('Epoch', epoch)
-                    print('epoch loss: ', epoch_loss )
-                    for input_sent, target_sent, pred in zip(input_batch, target_batch, batch_preds):
-                        print('Input:', input_sent)
-                        print('Prediction:', idx2sent(pred, reverse_vocab=reverse_vocab))
-                        print('Target:', target_sent)
+                    #loss_history.append(epoch_loss)
+                    if epoch % 10 == 0:
+                        print('')
+                        print('Epoch', epoch)
+                        print('epoch loss: ', epoch_loss )
+                        for feature, target_sent, pred in zip(conv_features, sentences, batch_preds):
+                            print('')
+                            #print('Feature:', feature)
+                            #print('Prediction:', idx2sent(pred, reverse_vocab=reverse_vocab))
+                            print('P->:', train_data.vocabulary.get_sentence(pred))
+                            print('T<-:', train_data.vocabulary.get_sentence(target_sent))
             
             self.generator.save_model(sess, './models')
 
-    def train_old(self, sess, train_data):
+    def train(self, sess, train_data):
         '''
         sampler: a function to sample given batch_size
 
@@ -274,69 +235,8 @@ class SeqGAN(BaseModel):
         
         fake_samples = []
 
-        vgg_dir = 'D:/download/art_desc/train/images_vgg/'
-        # Batch_size: 1
-        '''
-        conv_features = [
-            np.load(vgg_dir+'art_desc1.npy'), 
-            np.load(vgg_dir+'art_desc2.npy'), 
-            np.load(vgg_dir+'art_desc3.npy'), 
-            np.load(vgg_dir+'art_desc4.npy')] 
-        target_batches = [
-            ['The close range of this photograph of peeling paint precludes the viewer from gaining any foothold into the space of the picture, emphasizing its ultimate flatness. Siskind was especially drawn to surfaces that resembled the canvases of the Abstract Expressionist painters, with whom he was friends.'],
-            ['Metal Hook is one of Siskind\'s first photographs that truly focuses on the abstract visual language of ordinary objects.  The flatness of the image as a whole also serves to assert the graphic quality of the metal hook itself as a sign/symbol for male and female, thus suggesting a level of content in addition to that of form.'],
-            ['One of Siskind\'s later works, Recife (Olinda) 8 was taken during his travels in Northeastern Brazil.  The result is that we are forced to remain as viewers attached to the abstract surface - noting with pleasure the additional details of age, texture, misaligned lines, and accidental drips.'],
-            ['Siskind\'s first pictures show a decidedly more straightforward approach to picture making than the later work for which he became known. Although the male figure is a specific individual and technically the focal point, he is flattened in his own reflection against the back wall, pressed into the service of the overall design of the photograph.']]
-        sentences = np.squeeze(target_batches)
-        print(sentences)
-        '''
-        vgg_dir = 'D:/download/art_desc/train/images_vgg/'
-# Batch_size: 1
-        input_batches = [
-            [np.load(vgg_dir+'art_desc1.npy')], 
-            [np.load(vgg_dir+'art_desc2.npy')], 
-            [np.load(vgg_dir+'art_desc3.npy')], 
-            [np.load(vgg_dir+'art_desc4.npy')], 
-            [np.load(vgg_dir+'art_desc6.npy')], 
-            [np.load(vgg_dir+'art_desc7.npy')], 
-            [np.load(vgg_dir+'art_desc8.npy')], 
-            [np.load(vgg_dir+'art_desc9.npy')]] 
-
-        target_batches = [
-            ['The close range of this photograph of peeling paint precludes the viewer from gaining any foothold into the space of the picture, emphasizing its ultimate flatness. Siskind was especially drawn to surfaces that resembled the canvases of the Abstract Expressionist painters, with whom he was friends.'],
-            ['Metal Hook is one of Siskind\'s first photographs that truly focuses on the abstract visual language of ordinary objects.  The flatness of the image as a whole also serves to assert the graphic quality of the metal hook itself as a sign/symbol for male and female, thus suggesting a level of content in addition to that of form.'],
-            ['One of Siskind\'s later works, Recife (Olinda) 8 was taken during his travels in Northeastern Brazil.  The result is that we are forced to remain as viewers attached to the abstract surface - noting with pleasure the additional details of age, texture, misaligned lines, and accidental drips.'],
-            ['Siskind\'s first pictures show a decidedly more straightforward approach to picture making than the later work for which he became known. Although the male figure is a specific individual and technically the focal point, he is flattened in his own reflection against the back wall, pressed into the service of the overall design of the photograph.'],
-            ['The Blue Series followed the Red Series of paintings and this is one of its most successful examples. The rectangular shapes of various shades of blue and green are suspended within a resplendent azure surface.'],
-            ['This is one of the paintings belonging to the Red Series. Here the artist immersed himself completely into the exploration of the color red, one of the most expressive among the primary colors.'],
-            ['In this famous cartoon of 1946 Ad Reinhardt tried to encapsulate the essence of the artistic modernism with its history and inherent conflicts within the American context. The tree of modern art has its roots deep in history - the Greeks are here, and so are Persian miniatures and Japanese prints.'],
-            ['This early composition by Ad Reinhardt exhibits the artist\'s profound interest and understanding of the Cubist art of Pablo Picasso and George Braque. The palette is typical of the style and is comprised of four colors essential for a Cubist painting: black, white, brown, and gray.']]
-            
-        #sentences, conv_features, sent_lens = self.next_batch(train_data, True)
-        conv_features = np.squeeze(input_batches)
-        sentences = []
-        sent_lens = []
-        target_batches = np.squeeze(target_batches)
-        for sent in target_batches:
-            current_word_idxs, current_length = (train_data.vocabulary.process_sentence(sent))
-            current_num_words = min(config.max_caption_length-2, current_length)
-
-            current_word_idxs = [config._START_] + current_word_idxs[:current_num_words] + [config._END_]
-            pad_length = config.max_caption_length - current_num_words -2
-            if pad_length > 0:
-                current_word_idxs += [config._PAD_] * (pad_length)
-
-            sentences.append(current_word_idxs)
-            sent_lens.append(config.max_caption_length)
-        sentences = np.array(sentences)
-        sent_lens = np.array(sent_lens)
-
-        print('sentences shape ' + str(sentences.shape))
-        print('sent kebs shape ' + str(sent_lens.shape))
-
         for epoch in tqdm(list(range(pretrain_g_epochs)), desc='Pretraining Generator'):
-        #for epoch in range(1):
-            #sentences, conv_features, sent_lens = self.next_batch(train_data, True)
+            sentences, conv_features, sent_lens = self.next_batch(train_data, extract=True)
             
             summary, fake_samples, loss = gen.pretrain(sess, sentences, conv_features, sent_lens) #changed sampler to next_batch
             #print(np.shape(fake_samples))
@@ -364,14 +264,14 @@ class SeqGAN(BaseModel):
 
         for epoch in tqdm(list(range(pretrain_d_epochs)), desc='Pretraining Discriminator'):
         #for epoch in range(1):
-            sentences, conv_features, sent_lens = self.next_batch(train_data, True)
+            sentences, conv_features, sent_lens = self.next_batch(train_data, extract=True)
             fake_samples = gen.generate(sess, sentences, conv_features, sent_lens)
             fake_samples = np.squeeze(fake_samples)
             if (epoch%50 == 0):
                 print("TARGET: " + train_data.vocabulary.get_sentence(sentences[0]))
                 print("PREDICTED: " + train_data.vocabulary.get_sentence(fake_samples[0]))
             
-            real_samples, conv_features, sample_lens = self.next_batch(train_data)
+            real_samples, conv_features, sample_lens = self.next_batch(train_data, extract=False)
 
            #print("fake samples shape: " + str(fake_samples.shape))
             #print("real samples shape: " + str(real_samples.shape))
@@ -387,7 +287,7 @@ class SeqGAN(BaseModel):
         for epoch in tqdm(list(range(config.total_epochs)), desc='Adversarial training'):
         #for epoch in range(1):
             for _ in range(1):
-                sentences, conv_features, sent_lens = self.next_batch(train_data, True)
+                sentences, conv_features, sent_lens = self.next_batch(train_data, extract=True)
                 #real_samples = sentences
                 fake_samples = gen.generate(sess, sentences, conv_features, sent_lens)
                 fake_samples = np.squeeze(fake_samples) #generator generates fake samples
@@ -407,13 +307,13 @@ class SeqGAN(BaseModel):
 
             for _ in tqdm(list(range(5)), desc='Discriminator batch'):
                 #print("conv features shape " + str(np.array(conv_features).shape))
-                sentences, conv_features, sent_lens = self.next_batch(train_data, True)
+                sentences, conv_features, sent_lens = self.next_batch(train_data, extract=True)
 
                 fake_samples = gen.generate(sess, sentences, conv_features, sent_lens)
                 fake_samples = np.squeeze(fake_samples) #generator generates fake samples after being trained
                 #real_samples = sentences
 
-                real_samples, conv_features, sample_lens = self.next_batch(train_data, True)
+                real_samples, conv_features, sample_lens = self.next_batch(train_data, extract=True)
                 #TODO pass in image condition for conditional gan
                 samples = np.concatenate([fake_samples, real_samples])
                 labels = np.concatenate([np.zeros((batch_size,)),
@@ -435,7 +335,7 @@ class SeqGAN(BaseModel):
             if evaluate and evaluator is not None:
                 evaluator(gen.generate(sess), pretrain_g_epochs+epoch)
             '''
-            real_samples, conv_features, sample_lens = self.next_batch(train_data, True)
+            real_samples, conv_features, sample_lens = self.next_batch(train_data, extract=True)
             np.save('generation', gen.generate(sess, real_samples, conv_features, sample_lens))
         if not os.path.exists(config.save_dir):
             try:  
@@ -459,14 +359,14 @@ class SeqGAN(BaseModel):
             batch_tokens = []
             batch_sent_lens = []
             input_batches = [
-                 np.load(vgg_dir+'art_desc1.npy'), 
-                 np.load(vgg_dir+'art_desc2.npy'), 
-                 np.load(vgg_dir+'art_desc3.npy'), 
-                 np.load(vgg_dir+'art_desc4.npy'), 
-                 np.load(vgg_dir+'art_desc6.npy'), 
-                 np.load(vgg_dir+'art_desc7.npy'), 
-                 np.load(vgg_dir+'art_desc8.npy'), 
-                 np.load(vgg_dir+'art_desc9.npy'),
+                 #np.load(vgg_dir+'art_desc1.npy'), 
+                 #np.load(vgg_dir+'art_desc2.npy'), 
+                 #np.load(vgg_dir+'art_desc3.npy'), 
+                 #np.load(vgg_dir+'art_desc4.npy'), 
+                 #np.load(vgg_dir+'art_desc6.npy'), 
+                 #np.load(vgg_dir+'art_desc7.npy'), 
+                 #np.load(vgg_dir+'art_desc8.npy'), 
+                 #np.load(vgg_dir+'art_desc9.npy'),
                  np.load(vgg_dir+'art_desc21.npy'), 
                  np.load(vgg_dir+'art_desc22.npy'),
                  np.load(vgg_dir+'art_desc23.npy'), 
@@ -478,14 +378,14 @@ class SeqGAN(BaseModel):
             
 
             target_batches = [
-                 'The close range of this photograph of peeling paint precludes the viewer from gaining any foothold into the space of the picture, emphasizing its ultimate flatness. Siskind was especially drawn to surfaces that resembled the canvases of the Abstract Expressionist painters, with whom he was friends.',
-                 'Metal Hook is one of Siskind\'s first photographs that truly focuses on the abstract visual language of ordinary objects.  The flatness of the image as a whole also serves to assert the graphic quality of the metal hook itself as a sign/symbol for male and female, thus suggesting a level of content in addition to that of form.',
-                 'One of Siskind\'s later works, Recife (Olinda) 8 was taken during his travels in Northeastern Brazil.  The result is that we are forced to remain as viewers attached to the abstract surface - noting with pleasure the additional details of age, texture, misaligned lines, and accidental drips.',
-                 'Siskind\'s first pictures show a decidedly more straightforward approach to picture making than the later work for which he became known. Although the male figure is a specific individual and technically the focal point, he is flattened in his own reflection against the back wall, pressed into the service of the overall design of the photograph.',
-                 'The Blue Series followed the Red Series of paintings and this is one of its most successful examples. The rectangular shapes of various shades of blue and green are suspended within a resplendent azure surface.',
-                 'This is one of the paintings belonging to the Red Series. Here the artist immersed himself completely into the exploration of the color red, one of the most expressive among the primary colors.',
-                 'In this famous cartoon of 1946 Ad Reinhardt tried to encapsulate the essence of the artistic modernism with its history and inherent conflicts within the American context. The tree of modern art has its roots deep in history - the Greeks are here, and so are Persian miniatures and Japanese prints.',
-                 'This early composition by Ad Reinhardt exhibits the artist\'s profound interest and understanding of the Cubist art of Pablo Picasso and George Braque. The palette is typical of the style and is comprised of four colors essential for a Cubist painting: black, white, brown, and gray.',
+                 #'The close range of this photograph of peeling paint precludes the viewer from gaining any foothold into the space of the picture, emphasizing its ultimate flatness. Siskind was especially drawn to surfaces that resembled the canvases of the Abstract Expressionist painters, with whom he was friends.',
+                 #'Metal Hook is one of Siskind\'s first photographs that truly focuses on the abstract visual language of ordinary objects.  The flatness of the image as a whole also serves to assert the graphic quality of the metal hook itself as a sign/symbol for male and female, thus suggesting a level of content in addition to that of form.',
+                 #'One of Siskind\'s later works, Recife (Olinda) 8 was taken during his travels in Northeastern Brazil.  The result is that we are forced to remain as viewers attached to the abstract surface - noting with pleasure the additional details of age, texture, misaligned lines, and accidental drips.',
+                 #'Siskind\'s first pictures show a decidedly more straightforward approach to picture making than the later work for which he became known. Although the male figure is a specific individual and technically the focal point, he is flattened in his own reflection against the back wall, pressed into the service of the overall design of the photograph.',
+                 #'The Blue Series followed the Red Series of paintings and this is one of its most successful examples. The rectangular shapes of various shades of blue and green are suspended within a resplendent azure surface.',
+                 #'This is one of the paintings belonging to the Red Series. Here the artist immersed himself completely into the exploration of the color red, one of the most expressive among the primary colors.',
+                 #'In this famous cartoon of 1946 Ad Reinhardt tried to encapsulate the essence of the artistic modernism with its history and inherent conflicts within the American context. The tree of modern art has its roots deep in history - the Greeks are here, and so are Persian miniatures and Japanese prints.',
+                 #'This early composition by Ad Reinhardt exhibits the artist\'s profound interest and understanding of the Cubist art of Pablo Picasso and George Braque. The palette is typical of the style and is comprised of four colors essential for a Cubist painting: black, white, brown, and gray.',
                  'Martin destroyed much of her work made before the late 1950s when she shifted to a grid format, so works from this period of her oeuvre are scarce. Her early style has been compared to that of Arshile Gorky and, like his works, Untitled displays Martin\'s debt to Surrealism and Abstract Expressionism.',
                  'Untitled XXI is an example of Martin\'s work after the mid-1970s. Though Untitled XXI is not explicitly designated as a landscape, by name or representation, Martin throughout her artistic life attempted to capture the sublime of everyday nature through her continued variation on the square format.',
                  'With Window, Martin\'s forms became less organic and more rigid as she experimented with rectangular forms, anticipating the later introduction of the grid\'s mathematical precision in her work. Although this work was created during the first years of Martin\'s final return to New York, Window still incorporates a Southwestern palette, while abandoning the curved line of earlier work.',
@@ -502,23 +402,26 @@ class SeqGAN(BaseModel):
                 batch_tokens.append(input_sent)
                 batch_sent_lens.append(len(input_sent))
 
-            print('batch_tokens shape: ' + str(np.array(batch_tokens).shape))
-            print('batch_sent_lens shape: ' + str(np.array(batch_sent_lens).shape))
+            #print('batch_tokens shape: ' + str(np.array(batch_tokens).shape))
+            #print('batch_sent_lens shape: ' + str(np.array(batch_sent_lens).shape))
             batch_preds = self.generator.inference(sess, batch_tokens, batch_sent_lens)
             
             batch_preds = np.squeeze(np.array(batch_preds))
             input_batches = np.squeeze(np.array(input_batches))
             target_batches = np.squeeze(np.array(target_batches))
 
-            print('batch preds shape: ' + str(np.array(batch_preds).shape))
-            print('input batches shape: ' + str(np.array(input_batches).shape))
-            print('target batches shape: ' + str(np.array(target_batches).shape))
+            #print('batch preds shape: ' + str(np.array(batch_preds).shape))
+            #print('input batches shape: ' + str(np.array(input_batches).shape))
+            #print('target batches shape: ' + str(np.array(target_batches).shape))
 
-            for input_sent, target_sent, pred in zip(input_batches, target_batches, batch_preds):
-                print('Input:', input_sent)
+            for target_sent, pred in zip(target_batches, batch_preds):
+            #for pred in batch_preds:
+                #print('Input:', input_sent)
                 #print(pred)
-                print('Prediction:', idx2sent(pred, reverse_vocab=reverse_vocab))
-                print('Target:', target_sent)
+                print('')
+                print(eval_data.vocabulary.get_sentence(pred))
+
+                #print('Target:', target_sent)
 
     def eval_old(self, sess, eval_data):
         """ Evaluate the model using the COCO val2014 data. """

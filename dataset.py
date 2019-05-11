@@ -7,12 +7,14 @@ from utils.coco.coco import COCO
 from utils.vocabulary import Vocabulary
 from utils.caffe_io import Transformer
 #TODO: add sampler method
+
 class DataSet(object):
     def __init__(self,
                  coco,
                  vocabulary,
                  image_ids,
                  image_files,
+                 feature_files,
                  batch_size,
                  word_idxs=None,
                  masks=None,
@@ -23,6 +25,7 @@ class DataSet(object):
         self.vocabulary = vocabulary
         self.image_ids = np.array(image_ids)
         self.image_files = np.array(image_files)
+        self.feature_files = np.array(feature_files)
         self.word_idxs = np.array(word_idxs)
         self.masks = np.array(masks)
         self.lens = np.array(sent_lens)
@@ -61,16 +64,17 @@ class DataSet(object):
 
         image_files = self.image_files[current_idxs]
         if self.is_train:
+            feature_files = self.feature_files[current_idxs]
             word_idxs = self.word_idxs[current_idxs]
             masks = self.masks[current_idxs]
             lens = self.lens[current_idxs]
             self.current_idx += self.batch_size
 
             #print(word_idxs.shape, image_files.shape, lens.shape)
-            return image_files, word_idxs, masks, lens
+            return image_files, feature_files, word_idxs, masks, lens
         else:
             self.current_idx += self.batch_size
-            return image_files
+            return image_files, feature_files
 
     def has_next_batch(self):
         """ Determine whether there is a batch left. """
@@ -85,7 +89,7 @@ def prepare_train_data(config):
     coco = COCO(config.train_caption_file, config.ignore_file)
     #coco.filter_by_cap_len(config.max_caption_length)
 
-    #print("Building the vocabulary...")
+    print("Building the vocabulary...")
     vocabulary = Vocabulary(config.vocabulary_size, config.ctrl_symbols)
     if not os.path.exists(config.vocabulary_file):
         vocabulary.build(coco.all_captions())
@@ -93,11 +97,100 @@ def prepare_train_data(config):
     else:
         vocabulary.load(config.vocabulary_file)
     #print("Vocabulary built.")
-    #print("Number of words = %d" %(vocabulary.size))
+    print("Number of words = %d" %(vocabulary.size))
 
     #coco.filter_by_words(set(vocabulary.words))
 
-    #print("Processing the captions...")
+    print("Processing the captions...")
+    if not os.path.exists(config.temp_annotation_file):
+        captions = [coco.anns[ann_id]['caption'] for ann_id in coco.anns]
+        image_ids = [coco.anns[ann_id]['image_id'] for ann_id in coco.anns]
+        image_files = [os.path.join(config.train_image_dir,
+                                    coco.imgs[image_id]['file_name'])
+                                    for image_id in image_ids]
+        feature_files = [os.path.join(config.train_feature_dir,
+                                    os.path.basename(coco.imgs[image_id]['file_name'].replace('.jpg', '.npy')))
+                                    for image_id in image_ids]
+        annotations = pd.DataFrame({'image_id': image_ids,
+                                    'image_file': image_files,
+                                    'feature_file': feature_files,
+                                    'caption': captions})
+        annotations.to_csv(config.temp_annotation_file)
+    else:
+        annotations = pd.read_csv(config.temp_annotation_file)
+        captions = [] 
+        image_ids = [] 
+        image_files = [] 
+        feature_files = []
+        for lineno, id, file, feature, cap in annotations.values:
+            
+            image_ids.append(id)
+            image_files.append(file)
+            feature_files.append(feature)
+            captions.append(cap)
+        
+    print("NUM CAPTIONS: " + str(len(captions)))
+    if not os.path.exists(config.temp_data_file):
+        word_idxs = []
+        masks = []
+        sent_lens = []
+        for caption in tqdm(captions):
+            current_word_idxs, current_length = vocabulary.process_sentence(caption)
+            current_num_words = min(config.max_caption_length-1, current_length)
+
+            pad_length = config.max_caption_length - current_length
+            current_word_idxs = [config._START_] + current_word_idxs[:current_num_words] + [config._END_] + [config._PAD_] * (pad_length-1)
+
+            current_masks = np.zeros(config.max_caption_length)
+            current_masks[:current_num_words] = 1.0
+
+            word_idxs.append(current_word_idxs)
+            masks.append(current_masks)
+            sent_lens.append(current_num_words+1)
+        word_idxs = np.array(word_idxs)
+        masks = np.array(masks)
+        data = {'word_idxs': word_idxs, 'masks': masks, 'sentence_len': sent_lens}
+        np.save(config.temp_data_file, data)
+    else:
+        data = np.load(config.temp_data_file).item()
+        word_idxs = data['word_idxs']
+        masks = data['masks']
+        sent_lens = data['sentence_len']
+    #print("Captions processed.")
+    #print("Number of captions = %d" %(len(captions)))
+    #print("Number of word_idxs = %d" %(len(word_idxs)))
+    #print("Number of sent_lens = %d" %(len(sent_lens)))
+    dataset = DataSet(coco,
+                      vocabulary,
+                      image_ids,
+                      image_files,
+                      feature_files,
+                      config.batch_size,
+                      word_idxs,
+                      masks,
+                      sent_lens,
+                      True,
+                      True)
+    return dataset
+
+def prepare_train_data_old(config):
+    """ Prepare the data for training the model. """
+    coco = COCO(config.train_caption_file, config.ignore_file)
+    #coco.filter_by_cap_len(config.max_caption_length)
+
+    print("Building the vocabulary...")
+    vocabulary = Vocabulary(config.vocabulary_size, config.ctrl_symbols)
+    if not os.path.exists(config.vocabulary_file):
+        vocabulary.build(coco.all_captions())
+        vocabulary.save(config.vocabulary_file)
+    else:
+        vocabulary.load(config.vocabulary_file)
+    #print("Vocabulary built.")
+    print("Number of words = %d" %(vocabulary.size))
+
+    #coco.filter_by_words(set(vocabulary.words))
+
+    print("Processing the captions...")
     if not os.path.exists(config.temp_annotation_file):
         captions = [coco.anns[ann_id]['caption'] for ann_id in coco.anns]
         image_ids = [coco.anns[ann_id]['image_id'] for ann_id in coco.anns]
@@ -190,7 +283,7 @@ def prepare_eval_data(config):
     print("Number of words = %d" %(vocabulary.size))
 
     print("Building the dataset...")
-    dataset = DataSet(coco, vocabulary, image_ids, image_files, config.batch_size)
+    dataset = DataSet(coco, vocabulary, image_ids, image_files, None, config.batch_size)
     print("Dataset built.")
     return dataset
 
@@ -201,7 +294,6 @@ def prepare_test_data(config):
     image_files = [os.path.join(config.test_image_dir, f) for f in files
         if f.lower().endswith('.jpg') or f.lower().endswith('.jpeg')]
     image_ids = list(range(len(image_files)))
-
     print("Building the vocabulary...")
     if os.path.exists(config.vocabulary_file):
         vocabulary = Vocabulary(config.vocabulary_size,

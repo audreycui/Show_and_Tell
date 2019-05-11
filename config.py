@@ -9,9 +9,9 @@ class Config(object):
         self.st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d_%H-%M-%S')
 
         self.debug = False
-
-        # random seed
         self.seed = 17
+
+        self.num_epochs = 200
 
         # about the model architecture
         self.cnn = 'vgg19'               # changed from vgg16 to vgg19
@@ -48,15 +48,15 @@ class Config(object):
         self.attention_loss_factor = 0.01
         
         # about the optimization
-        #self.num_epochs = 2000
-        self.total_epochs = 200 #added for gan
+
+        self.total_epochs = 1500 #added for gan
         self.pretrain_g_epochs=50 #added for gan
         self.pretrain_d_epochs=1000 #added for gan
         self.d_filter_sizes=[3, 5, 5, 5] #added for discriminator
         self.d_num_filters=[50, 80, 80, 100] #added for discriminator
         self.num_rollout = 16
         self.highway_layers = 5 # added for dis
-        self.batch_size = 8
+        self.batch_size = 10
         self.optimizer = 'Adam'    # 'Adam', 'RMSProp', 'Momentum' or 'SGD'
         self.learning_rate = 0.001 # for seqgan
         self.initial_learning_rate = 0.0001
@@ -92,12 +92,15 @@ class Config(object):
         base_dir = 'D:/download/art_desc'
         self.train_caption_file = base_dir + '/train/ann.csv'
         self.eval_caption_file = base_dir + '/val/ann.csv'
+        self.caption_file = base_dir + '/train/caption.txt'
 
         # vocabulary
         self.vocabulary_size = 10000
         self.ctrl_symbols = ['<S>', '<P>', '<E>', '<UNK>']
+        self.total_vocabulary_size  = self.vocabulary_size + len(self.ctrl_symbols)
+
         self.vocabulary_file = base_dir + '/vocabulary.csv'
-        self.START = 0
+        #self.START = 0
         self._START_ = 0
         self._PAD_ = 1
         self._END_ = 2
@@ -107,6 +110,7 @@ class Config(object):
         self.ignore_file_eval = base_dir + '/ignore_eval.csv'
 
         self.train_image_dir = base_dir + '/train/images/'
+        self.train_feature_dir = base_dir + '/train/images_vgg/'
         self.temp_annotation_file = base_dir + '/train/temp_ann.csv'
         self.temp_data_file = base_dir + '/train/data.npy'
 

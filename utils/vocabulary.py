@@ -5,18 +5,55 @@ from tqdm import tqdm
 import string
 from nltk.tokenize import word_tokenize
 import math
+import re
+from collections import Counter
+
 class Vocabulary(object):
     def __init__(self, size, ctrl_symbols, save_file=None):
         self.size = size
         self.words = []
-        self.word2idx = {}
+        self.word2idx = dict()
+        self.idx2word = dict()
         self.word_frequencies = []
         self.ctrl_symbols = ctrl_symbols
         self.idx_head = len(self.ctrl_symbols)
         if save_file is not None:
             self.load(save_file)
 
+    def tokenizer(self, sentence):
+        tokens = re.findall(r"[\w]+|[^\s\w]", sentence)
+        return tokens
+
     def build(self, sentences):
+        """ Build the vocabulary and compute the frequency of each word. """
+        word_counter = Counter()
+        for sentence in sentences:
+            tokens = self.tokenizer(sentence.lower())
+            word_counter.update(tokens)
+
+        assert self.size <= len(word_counter.keys())
+
+        for i, pred in enumerate(self.ctrl_symbols):
+            self.words.append(pred)
+            self.word2idx[pred] = i
+            self.word_frequencies.append(1.0)
+
+        vocab_idx = self.idx_head
+        for key, value in word_counter.most_common(self.size):
+            self.words.append(key)
+            self.word2idx[key] = vocab_idx
+            vocab_idx += 1
+            self.word_frequencies.append(value)
+                
+        for key, value in self.word2idx.items():
+            self.idx2word[value] = key
+
+        self.word_frequencies = np.array(self.word_frequencies)
+        self.word_frequencies /= np.sum(self.word_frequencies)
+        self.word_frequencies = np.log(self.word_frequencies)
+        self.word_frequencies -= np.max(self.word_frequencies)
+
+    def build_old(self, sentences):
         """ Build the vocabulary and compute the frequency of each word. """
         word_counts = {}
         for sentence in tqdm(sentences):
@@ -48,7 +85,7 @@ class Vocabulary(object):
     def process_sentence(self, sentence):
         """ Tokenize a sentence, and translate each token into its index
             in the vocabulary. """
-        words = word_tokenize(sentence.lower())
+        words = self.tokenizer(sentence.lower())
         current_length = len(words)
 
         word_idxs = []
@@ -60,11 +97,7 @@ class Vocabulary(object):
 
         return word_idxs, current_length
 
-    def get_sentence_bad(self, idxs):
-        """ Translate a vector of indicies into a sentence. """
-        return  [self.words[i] for i in idxs]
-
-    def get_sentence(self, idxs):
+    def get_sentence_old(self, idxs):
         """ Translate a vector of indicies into a sentence. """
         words = [self.words[i] for i in idxs]
 
@@ -86,6 +119,14 @@ class Vocabulary(object):
                             else w for w in words]).strip()
         return sentence
 
+    def reverse_word(self, idx):
+        if idx in self.idx2word:
+            return self.idx2word[idx]
+        else:
+            return '_UNK_'+str(idx)
+
+    def get_sentence(self, idxs):
+        return " ".join([self.reverse_word(idx) for idx in idxs])
 
     def save(self, save_file):
         """ Save the vocabulary to a file. """
@@ -104,3 +145,6 @@ class Vocabulary(object):
         self.words = data['word'].values
         self.word2idx = {self.words[i]:i for i in range(self.size + self.idx_head)}
         self.word_frequencies = data['frequency'].values
+        
+        for key, value in self.word2idx.items():
+            self.idx2word[value] = key

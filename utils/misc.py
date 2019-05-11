@@ -10,6 +10,7 @@ import mxnet as mx
 from collections import namedtuple
 from utils.caffe_io import Transformer
 
+import os
 import skimage.io
 from scipy.ndimage import zoom
 from skimage.transform import resize
@@ -130,12 +131,15 @@ class ImageLoader(object):
         outputs = sentiment_model.get_outputs()[0].asnumpy()
         return outputs
 
-    def extract_features_vgg19(self, vgg19_model, images, batch_size):
+    def extract_features_vgg19(self, vgg19_model, images, feature_files, batch_size):
         features = []
         for i in range(batch_size):
-            fc2 = vgg19_model.predict(self.load_image(images[i]))
-            reshaped = np.reshape(fc2, (4096))  
-            features.append(reshaped)
+            try:
+                feature.append(np.load(feature_files[i]))
+            except:
+                fc2 = vgg19_model.predict(self.load_image(images[i]))
+                reshaped = np.reshape(fc2, (4096))  
+                features.append(reshaped)
         
         return features #shape: (batch_size, 4096)
 
